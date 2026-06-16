@@ -13,6 +13,7 @@ dependencies = [
     "uvicorn[standard]>=0.30",
     "pydantic>=2.7",
     "pydantic-settings>=2.3",      # typed settings loaded from .env
+    "email-validator>=2.1",        # backs pydantic EmailStr
 
     # --- PostgreSQL (users/auth/uploads) ---
     "sqlalchemy>=2.0",
@@ -21,6 +22,7 @@ dependencies = [
     # --- Auth ---
     "python-jose[cryptography]>=3.3",  # JWT encode/decode
     "passlib[bcrypt]>=1.7",            # password hashing
+    "bcrypt>=4.0.1,<4.1",             # pinned: 4.1+ trips a passlib version-read warning
     "python-multipart>=0.0.9",         # form/file uploads
 
     # --- Elasticsearch (emission time-series) ---
