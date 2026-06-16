@@ -1,0 +1,69 @@
+# CarbonTrace CI
+# Runs on every PR into dev/main (and pushes to them) so each feature branch is
+# validated before merge. Two independent jobs so backend/frontend run in parallel.
+name: CI
+
+on:
+  pull_request:
+    branches: [dev, main]
+  push:
+    branches: [dev, main]
+
+# Cancel superseded runs on the same branch to save minutes.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Backend: lint with ruff, validate the uv lockfile, and smoke-test that the
+  # FastAPI app imports cleanly.
+  # ---------------------------------------------------------------------------
+  backend:
+    name: Backend (lint + boot)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./backend
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+
+      - name: Install dependencies (frozen lockfile)
+        run: uv sync --frozen
+
+      - name: Lint (ruff)
+        run: uv run ruff check .
+
+      - name: Smoke test — app imports
+        run: uv run python -c "import main; print('FastAPI app import OK')"
+
+  # ---------------------------------------------------------------------------
+  # Frontend: validate that dependencies resolve/install.
+  # The production build step is enabled once a real Vite app exists
+  # (frontend phase: index.html, vite.config.js, src/main.jsx).
+  # ---------------------------------------------------------------------------
+  frontend:
+    name: Frontend (install)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install dependencies
+        run: npm install
+
+      # Enabled in the frontend phase, once there is something to build:
+      # - name: Build
+      #   run: npm run build
