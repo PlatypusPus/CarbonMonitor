@@ -1,5 +1,7 @@
-"""Password hashing and JWT access-token helpers."""
+"""Password hashing, JWT access-token, and refresh-token helpers."""
 
+import hashlib
+import secrets
 from datetime import datetime, timedelta, timezone
 
 from jose import jwt
@@ -33,3 +35,11 @@ def create_access_token(subject: str, role: str, expires_minutes: int | None = N
 def decode_token(token: str) -> dict:
     settings = get_settings()
     return jwt.decode(token, settings.jwt_secret_key, algorithms=[settings.jwt_algorithm])
+
+
+def generate_refresh_token() -> str:
+    return secrets.token_urlsafe(48)
+
+
+def hash_refresh_token(token: str) -> str:
+    return hashlib.sha256(token.encode()).hexdigest()
