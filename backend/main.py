@@ -1,25 +1,35 @@
-"""CarbonTrace backend entrypoint.
-
-This is intentionally minimal for Phase 0 — it only proves the app boots and
-exposes a health check. Routers, database, auth, the poller, and the anomaly
-engine are wired in during later phases.
-"""
+"""CarbonTrace backend entrypoint."""
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
-app = FastAPI(
-    title="CarbonTrace API",
-    version="0.1.0",
-    description="Automated carbon emission monitoring & ESG reporting.",
-)
+from config import get_settings
 
 
-@app.get("/health", tags=["system"])
-def health() -> dict[str, str]:
-    """Liveness probe used by Docker/nginx to confirm the API is up."""
-    return {"status": "ok"}
+def create_app() -> FastAPI:
+    settings = get_settings()
+    settings.assert_production_ready()
+
+    app = FastAPI(
+        title="CarbonTrace API",
+        version="0.1.0",
+        description="Automated carbon emission monitoring & ESG reporting.",
+    )
+
+    # allow_credentials lets the browser send the refresh-token cookie cross-origin.
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=settings.cors_origins_list,
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+
+    @app.get("/health", tags=["system"])
+    def health() -> dict[str, str]:
+        return {"status": "ok", "environment": settings.environment}
+
+    return app
 
 
-# Routers are included here in later phases, e.g.:
-# from routers import auth, emissions, anomalies, reports, upload
-# app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
+app = create_app()
