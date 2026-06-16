@@ -1,9 +1,4 @@
-"""Upload router — placeholder.
-
-Phase: FastAPI endpoints. Will accept manual data uploads (CSV) for
-cross-verification against API-sourced emission data; metadata stored in
-the Postgres `uploads` table.
-"""
+"""CSV data uploads for cross-verification against API-sourced emissions."""
 
 from fastapi import APIRouter
 

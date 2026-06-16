@@ -1,7 +1,4 @@
-"""Reports router — placeholder.
-
-Phase: ESG export. Will generate downloadable ESG PDF reports via ReportLab.
-"""
+"""ESG PDF report generation and download."""
 
 from fastapi import APIRouter
 
