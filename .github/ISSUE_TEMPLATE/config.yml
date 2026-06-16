@@ -1,0 +1,3 @@
+# Force contributors to pick a structured template instead of a blank issue,
+# so every ticket carries the scope/branch info needed to coordinate.
+blank_issues_enabled: false
