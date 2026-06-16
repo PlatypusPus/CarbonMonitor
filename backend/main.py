@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from config import get_settings
 from database import init_db
+from routers import auth
 
 
 @asynccontextmanager
@@ -34,6 +35,8 @@ def create_app() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+
+    app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
 
     @app.get("/health", tags=["system"])
     def health() -> dict[str, str]:
