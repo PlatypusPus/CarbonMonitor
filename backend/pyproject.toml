@@ -1,0 +1,52 @@
+[project]
+name = "carbontrace-backend"
+version = "0.1.0"
+description = "CarbonTrace backend — FastAPI API, auth, anomaly engine, ESG reports, API poller."
+readme = "README.md"
+requires-python = ">=3.11"
+
+# Dependencies are grouped by the layer that introduces them so it's clear
+# why each one exists. We add them incrementally as we build each layer.
+dependencies = [
+    # --- Web framework / server ---
+    "fastapi>=0.111",
+    "uvicorn[standard]>=0.30",
+    "pydantic>=2.7",
+    "pydantic-settings>=2.3",      # typed settings loaded from .env
+
+    # --- PostgreSQL (users/auth/uploads) ---
+    "sqlalchemy>=2.0",
+    "psycopg[binary]>=3.1",        # modern Postgres driver
+
+    # --- Auth ---
+    "python-jose[cryptography]>=3.3",  # JWT encode/decode
+    "passlib[bcrypt]>=1.7",            # password hashing
+    "python-multipart>=0.0.9",         # form/file uploads
+
+    # --- Elasticsearch (emission time-series) ---
+    "elasticsearch>=8.13,<9",
+
+    # --- Background polling of external APIs ---
+    "apscheduler>=3.10",
+    "httpx>=0.27",
+
+    # --- ML anomaly detection ---
+    "scikit-learn>=1.5",
+    "numpy>=1.26",
+    "pandas>=2.2",
+
+    # --- ESG PDF export ---
+    "reportlab>=4.2",
+]
+
+[dependency-groups]
+# Dev-only tools (installed with `uv sync`, excluded from the prod image).
+dev = [
+    "ruff>=0.5",
+    "pytest>=8.2",
+    "pytest-asyncio>=0.23",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
