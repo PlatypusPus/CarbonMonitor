@@ -13,6 +13,7 @@ dependencies = [
     "uvicorn[standard]>=0.30",
     "pydantic>=2.7",
     "pydantic-settings>=2.3",      # typed settings loaded from .env
+    "email-validator>=2.1",        # backs pydantic EmailStr
 
     # --- PostgreSQL (users/auth/uploads) ---
     "sqlalchemy>=2.0",
