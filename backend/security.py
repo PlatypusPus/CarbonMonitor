@@ -36,7 +36,6 @@ def decode_token(token: str) -> dict:
     settings = get_settings()
     return jwt.decode(token, settings.jwt_secret_key, algorithms=[settings.jwt_algorithm])
 
-
 def generate_refresh_token() -> str:
     return secrets.token_urlsafe(48)
 
