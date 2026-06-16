@@ -1,0 +1,71 @@
+name: "🟢 Feature work"
+description: "Propose a piece of work before starting it (required for teammates to claim a task)."
+title: "[Feature]: <short description>"
+labels: ["feature"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for coordinating! Open this **before** you start coding so the
+        scope is clear and we don't double up. You'll branch as `feature/<name>`
+        off `dev` and link this issue in your PR.
+
+  - type: input
+    id: summary
+    attributes:
+      label: What are you building?
+      description: One sentence describing the work.
+      placeholder: "Add the APScheduler poller for Electricity Maps."
+    validations:
+      required: true
+
+  - type: dropdown
+    id: layer
+    attributes:
+      label: Which layer / phase does this touch?
+      description: Keep work aligned to the bottom-up build order.
+      options:
+        - "Infrastructure (docker/compose/nginx/CI)"
+        - "Backend config & app factory"
+        - "Auth (JWT + refresh + roles)"
+        - "Database models (Postgres)"
+        - "API poller (APScheduler + external APIs)"
+        - "Logstash pipeline → Elasticsearch"
+        - "FastAPI endpoints (emissions / uploads)"
+        - "Anomaly engine (Isolation Forest)"
+        - "Frontend (React pages)"
+        - "ESG reporting (PDF export)"
+        - "Deployment / CD (GCP)"
+        - "Other"
+    validations:
+      required: true
+
+  - type: input
+    id: branch
+    attributes:
+      label: Proposed branch name
+      description: Use the feature/<name> convention.
+      placeholder: "feature/api-poller-electricity-maps"
+    validations:
+      required: true
+
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope & acceptance criteria
+      description: What's in scope, what's out, and how we'll know it's done.
+      placeholder: |
+        - Polls Electricity Maps every POLL_INTERVAL_MINUTES
+        - Ships readings to Logstash
+        - Out of scope: anomaly tagging (separate issue)
+    validations:
+      required: true
+
+  - type: textarea
+    id: dependencies
+    attributes:
+      label: Dependencies / blockers
+      description: Other issues, env vars, or layers this needs first.
+      placeholder: "Needs the backend config layer (#?) merged for Settings."
+    validations:
+      required: false

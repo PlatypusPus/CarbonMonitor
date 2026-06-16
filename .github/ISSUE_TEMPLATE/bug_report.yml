@@ -1,0 +1,57 @@
+name: "🐞 Bug report"
+description: "Report something that isn't working as expected."
+title: "[Bug]: <short description>"
+labels: ["bug"]
+body:
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: Describe the bug and what you expected instead.
+      placeholder: "The /api/health endpoint returns 500 after docker compose up."
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Affected area
+      options:
+        - "Backend (FastAPI)"
+        - "Frontend (React)"
+        - "Database (Postgres)"
+        - "Elasticsearch / Logstash / Kibana"
+        - "API poller"
+        - "Docker / Compose / Nginx"
+        - "CI / GitHub Actions"
+        - "Not sure"
+    validations:
+      required: true
+
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. cp .env.example .env
+        2. docker compose up --build
+        3. curl http://localhost/api/health
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs / screenshots
+      description: Paste container logs, stack traces, or screenshots.
+      render: shell
+    validations:
+      required: false
+
+  - type: input
+    id: env
+    attributes:
+      label: Environment
+      placeholder: "OS, browser, docker version, branch/commit"
+    validations:
+      required: false
