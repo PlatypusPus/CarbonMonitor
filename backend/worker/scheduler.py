@@ -7,12 +7,13 @@ from apscheduler.schedulers.blocking import BlockingScheduler
 from config import get_settings
 from worker.generator import generate_readings
 from worker.shipper import ship_readings
+from worker.sources import collect_external_readings
 
 logger = logging.getLogger(__name__)
 
 
 def poll_once() -> int:
-    readings = generate_readings()
+    readings = generate_readings() + collect_external_readings()
     ship_readings(readings)
     return len(readings)
 
