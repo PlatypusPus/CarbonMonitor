@@ -26,6 +26,7 @@ _MAPPINGS = {
         "facility_id": {"type": "keyword"},
         "facility_name": {"type": "keyword"},
         "region": {"type": "keyword"},
+        "upload_id": {"type": "keyword"},
         "is_anomaly": {"type": "boolean"},
         "anomaly_score": {"type": "double"},
         "expected_value": {"type": "double"},
