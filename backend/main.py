@@ -1,5 +1,6 @@
 """CarbonTrace backend entrypoint."""
 
+import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -7,12 +8,19 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from config import get_settings
 from database import init_db
-from routers import auth
+from routers import anomalies, auth, emissions, upload
+from services.es import ensure_index_template
+
+logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     init_db()
+    try:
+        ensure_index_template()
+    except Exception:
+        logger.exception("Could not ensure Elasticsearch index template; continuing")
     yield
 
 
@@ -37,6 +45,9 @@ def create_app() -> FastAPI:
     )
 
     app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
+    app.include_router(emissions.router, prefix="/api/emissions", tags=["emissions"])
+    app.include_router(upload.router, prefix="/api/upload", tags=["upload"])
+    app.include_router(anomalies.router, prefix="/api/anomalies", tags=["anomalies"])
 
     @app.get("/health", tags=["system"])
     def health() -> dict[str, str]:

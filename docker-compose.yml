@@ -125,6 +125,28 @@ services:
       - carbontrace
 
   # ---------------------------------------------------------------------------
+  # Poller — standalone APScheduler process (reuses the backend image). Polls
+  # the external APIs + sensor generator every POLL_INTERVAL_MINUTES and ships
+  # readings to Logstash. Runs as ONE process to avoid duplicate ingestion.
+  # ---------------------------------------------------------------------------
+  poller:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: carbontrace-poller
+    restart: unless-stopped
+    command: ["python", "-m", "worker.run"]
+    env_file:
+      - .env
+    environment:
+      - LOGSTASH_URL=http://logstash:8080
+      - ELASTICSEARCH_URL=http://elasticsearch:9200
+    depends_on:
+      - logstash
+    networks:
+      - carbontrace
+
+  # ---------------------------------------------------------------------------
   # Frontend — React + Vite dashboard. In production it is built to static
   # files and served by nginx; this service is primarily for local dev.
   # ---------------------------------------------------------------------------
