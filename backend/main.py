@@ -8,7 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from config import get_settings
 from database import init_db
-from routers import auth
+from routers import auth, emissions
 from services.es import ensure_index_template
 
 logger = logging.getLogger(__name__)
@@ -45,6 +45,7 @@ def create_app() -> FastAPI:
     )
 
     app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
+    app.include_router(emissions.router, prefix="/api/emissions", tags=["emissions"])
 
     @app.get("/health", tags=["system"])
     def health() -> dict[str, str]:
