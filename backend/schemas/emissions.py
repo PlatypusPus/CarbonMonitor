@@ -28,3 +28,10 @@ class MetricSummary(BaseModel):
     latest_value: float | None = None
     unit: str | None = None
     latest_timestamp: datetime | None = None
+
+
+class CrossVerifyPoint(BaseModel):
+    timestamp: datetime
+    live_value: float | None = None
+    upload_value: float | None = None
+    discrepancy_pct: float | None = None

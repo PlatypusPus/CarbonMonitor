@@ -5,6 +5,7 @@ from typing import Any
 from elasticsearch import NotFoundError
 
 from services.es import get_es_client
+from services.uploads import UPLOAD_INDEX
 
 LIVE_INDEX = "emissions-live"
 
@@ -41,9 +42,10 @@ def query_latest(
     return [_to_record(hit["_source"]) for hit in response["hits"]["hits"]]
 
 
-def query_timeseries(
+def _avg_series(
+    index: str,
     metric: str,
-    interval: str = "1h",
+    interval: str,
     source: str | None = None,
 ) -> list[dict[str, Any]]:
     filters: list[dict[str, Any]] = [{"term": {"metric": metric}}]
@@ -51,7 +53,7 @@ def query_timeseries(
         filters.append({"term": {"source": source}})
     try:
         response = get_es_client().search(
-            index=LIVE_INDEX,
+            index=index,
             size=0,
             query={"bool": {"filter": filters}},
             aggs={
@@ -68,6 +70,39 @@ def query_timeseries(
         {"timestamp": b["key_as_string"], "value": b["avg_value"]["value"], "count": b["doc_count"]}
         for b in buckets
     ]
+
+
+def query_timeseries(
+    metric: str,
+    interval: str = "1h",
+    source: str | None = None,
+) -> list[dict[str, Any]]:
+    return _avg_series(LIVE_INDEX, metric, interval, source)
+
+
+def query_crossverify(
+    metric: str,
+    interval: str = "1d",
+    source: str | None = None,
+) -> list[dict[str, Any]]:
+    live = {p["timestamp"]: p["value"] for p in _avg_series(LIVE_INDEX, metric, interval, source)}
+    uploaded = {p["timestamp"]: p["value"] for p in _avg_series(UPLOAD_INDEX, metric, interval)}
+    points = []
+    for timestamp in sorted(set(live) | set(uploaded)):
+        live_value = live.get(timestamp)
+        upload_value = uploaded.get(timestamp)
+        discrepancy_pct = None
+        if live_value not in (None, 0) and upload_value is not None:
+            discrepancy_pct = round((upload_value - live_value) / live_value * 100, 2)
+        points.append(
+            {
+                "timestamp": timestamp,
+                "live_value": live_value,
+                "upload_value": upload_value,
+                "discrepancy_pct": discrepancy_pct,
+            }
+        )
+    return points
 
 
 def query_summary() -> list[dict[str, Any]]:
