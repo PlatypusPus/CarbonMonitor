@@ -5,6 +5,7 @@ import logging
 from apscheduler.schedulers.blocking import BlockingScheduler
 
 from config import get_settings
+from services.anomaly import run_detection
 from worker.generator import generate_readings
 from worker.shipper import ship_readings
 from worker.sources import collect_external_readings
@@ -22,6 +23,7 @@ def run() -> None:
     minutes = get_settings().poll_interval_minutes
     scheduler = BlockingScheduler()
     scheduler.add_job(poll_once, "interval", minutes=minutes, id="poll_sources")
+    scheduler.add_job(run_detection, "interval", minutes=minutes, id="detect_anomalies")
     logger.info("Poller starting: polling every %d minute(s)", minutes)
     poll_once()
     scheduler.start()

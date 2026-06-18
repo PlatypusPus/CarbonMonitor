@@ -140,6 +140,7 @@ services:
       - .env
     environment:
       - LOGSTASH_URL=http://logstash:8080
+      - ELASTICSEARCH_URL=http://elasticsearch:9200
     depends_on:
       - logstash
     networks:
