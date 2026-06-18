@@ -8,7 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from config import get_settings
 from database import init_db
-from routers import anomalies, auth, emissions, upload
+from routers import anomalies, auth, emissions, reports, upload
 from services.es import ensure_index_template
 
 logger = logging.getLogger(__name__)
@@ -48,6 +48,7 @@ def create_app() -> FastAPI:
     app.include_router(emissions.router, prefix="/api/emissions", tags=["emissions"])
     app.include_router(upload.router, prefix="/api/upload", tags=["upload"])
     app.include_router(anomalies.router, prefix="/api/anomalies", tags=["anomalies"])
+    app.include_router(reports.router, prefix="/api/reports", tags=["reports"])
 
     @app.get("/health", tags=["system"])
     def health() -> dict[str, str]:
