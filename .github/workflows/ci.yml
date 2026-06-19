@@ -64,6 +64,5 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      # Enabled in the frontend phase, once there is something to build:
-      # - name: Build
-      #   run: npm run build
+      - name: Build
+        run: npm run build
