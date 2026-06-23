@@ -3,8 +3,10 @@
 import logging
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from elasticsearch import ConnectionError as ESConnectionError
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from config import get_settings
 from database import init_db
@@ -43,6 +45,10 @@ def create_app() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+
+    @app.exception_handler(ESConnectionError)
+    async def _es_unavailable(request: Request, exc: ESConnectionError) -> JSONResponse:
+        return JSONResponse(status_code=503, content={"detail": "Elasticsearch unavailable"})
 
     app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
     app.include_router(emissions.router, prefix="/api/emissions", tags=["emissions"])
