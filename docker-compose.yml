@@ -1,6 +1,5 @@
 # CarbonTrace — full stack orchestration
 # One command (`docker compose up`) brings up the entire system.
-# Services are grouped: data stores -> ELK pipeline -> app -> reverse proxy.
 #
 # NOTE: values come from the .env file in this same folder (see .env.example).
 # Docker Compose auto-loads .env for ${VAR} substitution below.
@@ -31,76 +30,6 @@ services:
       - carbontrace
 
   # ---------------------------------------------------------------------------
-  # Elasticsearch — time-series store for emission readings + anomalies.
-  # Heap capped at 512MB to fit a single e2-medium (see ES_JAVA_OPTS in .env).
-  # Security disabled for the demo so Logstash/Kibana connect without TLS certs.
-  # ---------------------------------------------------------------------------
-  elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:8.13.4
-    container_name: carbontrace-elasticsearch
-    restart: unless-stopped
-    environment:
-      - discovery.type=single-node
-      - xpack.security.enabled=false
-      - ES_JAVA_OPTS=${ES_JAVA_OPTS:--Xms512m -Xmx512m}
-    ulimits:
-      memlock:
-        soft: -1
-        hard: -1
-    volumes:
-      - es_data:/usr/share/elasticsearch/data
-    ports:
-      - "${ELASTICSEARCH_PORT:-9200}:9200"
-    healthcheck:
-      test: ["CMD-SHELL", "curl -s http://localhost:9200/_cluster/health | grep -q '\"status\":\"\\(green\\|yellow\\)\"'"]
-      interval: 15s
-      timeout: 10s
-      retries: 10
-    networks:
-      - carbontrace
-
-  # ---------------------------------------------------------------------------
-  # Logstash — ingestion pipeline. Receives data (HTTP/TCP) and writes it to
-  # Elasticsearch. Decouples "how data arrives" from "where data is stored".
-  # ---------------------------------------------------------------------------
-  logstash:
-    image: docker.elastic.co/logstash/logstash:8.13.4
-    container_name: carbontrace-logstash
-    restart: unless-stopped
-    volumes:
-      - ./elk/logstash/pipeline:/usr/share/logstash/pipeline:ro
-    ports:
-      - "${LOGSTASH_HTTP_PORT:-8080}:8080"   # HTTP input
-    environment:
-      - LS_JAVA_OPTS=${LS_JAVA_OPTS:--Xms256m -Xmx256m}
-      - ELASTICSEARCH_HOST=elasticsearch:9200
-    depends_on:
-      elasticsearch:
-        condition: service_healthy
-    networks:
-      - carbontrace
-
-  # ---------------------------------------------------------------------------
-  # Kibana — Elasticsearch's visual console. Used for debugging indices and
-  # building quick admin dashboards (our React app is the user-facing UI).
-  # ---------------------------------------------------------------------------
-  # Off by default (saves ~1GB RAM + its image). Run with: docker compose --profile tools up
-  kibana:
-    image: docker.elastic.co/kibana/kibana:8.13.4
-    container_name: carbontrace-kibana
-    restart: unless-stopped
-    profiles: ["tools"]
-    environment:
-      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
-    ports:
-      - "${KIBANA_PORT:-5601}:5601"
-    depends_on:
-      elasticsearch:
-        condition: service_healthy
-    networks:
-      - carbontrace
-
-  # ---------------------------------------------------------------------------
   # Backend — FastAPI app (auth, emissions API, anomaly engine, PDF reports).
   # ---------------------------------------------------------------------------
   backend:
@@ -113,12 +42,8 @@ services:
       - .env
     environment:
       - DATABASE_URL=postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
-      - ELASTICSEARCH_URL=http://elasticsearch:9200
-      - LOGSTASH_URL=http://logstash:8080
     depends_on:
       postgres:
-        condition: service_healthy
-      elasticsearch:
         condition: service_healthy
     expose:
       - "8000"
@@ -167,7 +92,6 @@ services:
 
 volumes:
   postgres_data:
-  es_data:
 
 networks:
   carbontrace:
