@@ -1,7 +1,4 @@
 # CarbonTrace
-
-CarbonTrace is an automated Scope 1 & Scope 2 carbon emissions monitoring system with BRSR Core-aligned disclosure reporting. Final Year Project, St. Joseph Engineering College.
-
 Facility-level activity data (electricity bills, fuel/LPG purchase records) is entered manually, uploaded as CSV, or extracted from bill scans via OCR. A calculation engine converts that activity data into Scope 1 / Scope 2 CO2e using region-specific (electricity) or fuel-type-specific (direct combustion) emission factors. Results feed a dashboard, anomaly detection, rule-based reduction recommendations, a what-if scenario simulator, and a BRSR Core-style PDF report.
 
 ## How it works
