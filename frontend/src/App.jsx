@@ -1,6 +1,7 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 
 import Layout from "./components/Layout";
+import ProtectedRoute from "./components/ProtectedRoute";
 import Anomalies from "./pages/Anomalies";
 import CrossVerify from "./pages/CrossVerify";
 import Dashboard from "./pages/Dashboard";
@@ -12,7 +13,13 @@ export default function App() {
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
-      <Route element={<Layout />}>
+      <Route
+        element={
+          <ProtectedRoute>
+            <Layout />
+          </ProtectedRoute>
+        }
+      >
         <Route path="/" element={<Dashboard />} />
         <Route path="/trends" element={<Trends />} />
         <Route path="/anomalies" element={<Anomalies />} />

@@ -3,5 +3,5 @@
 @tailwind utilities;
 
 body {
-  @apply bg-canvas text-slate-800;
+  @apply bg-canvas font-sans text-body;
 }

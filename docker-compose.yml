@@ -84,10 +84,12 @@ services:
   # Kibana — Elasticsearch's visual console. Used for debugging indices and
   # building quick admin dashboards (our React app is the user-facing UI).
   # ---------------------------------------------------------------------------
+  # Off by default (saves ~1GB RAM + its image). Run with: docker compose --profile tools up
   kibana:
     image: docker.elastic.co/kibana/kibana:8.13.4
     container_name: carbontrace-kibana
     restart: unless-stopped
+    profiles: ["tools"]
     environment:
       - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
     ports:
@@ -121,6 +123,8 @@ services:
         condition: service_healthy
     expose:
       - "8000"
+    ports:
+      - "8000:8000"   # lets the Vite dev server (localhost:5173) proxy /api -> backend
     networks:
       - carbontrace
 
