@@ -70,7 +70,7 @@ services:
     volumes:
       - ./elk/logstash/pipeline:/usr/share/logstash/pipeline:ro
     ports:
-      - "${LOGSTASH_HTTP_PORT:-8080}:8080"   # HTTP input for the poller/generator
+      - "${LOGSTASH_HTTP_PORT:-8080}:8080"   # HTTP input
     environment:
       - LS_JAVA_OPTS=${LS_JAVA_OPTS:--Xms256m -Xmx256m}
       - ELASTICSEARCH_HOST=elasticsearch:9200
@@ -101,8 +101,7 @@ services:
       - carbontrace
 
   # ---------------------------------------------------------------------------
-  # Backend — FastAPI app (auth, emissions API, anomaly engine, PDF reports)
-  # plus the APScheduler worker that polls external APIs every 5 minutes.
+  # Backend — FastAPI app (auth, emissions API, anomaly engine, PDF reports).
   # ---------------------------------------------------------------------------
   backend:
     build:
@@ -125,28 +124,6 @@ services:
       - "8000"
     ports:
       - "8000:8000"   # lets the Vite dev server (localhost:5173) proxy /api -> backend
-    networks:
-      - carbontrace
-
-  # ---------------------------------------------------------------------------
-  # Poller — standalone APScheduler process (reuses the backend image). Polls
-  # the external APIs + sensor generator every POLL_INTERVAL_MINUTES and ships
-  # readings to Logstash. Runs as ONE process to avoid duplicate ingestion.
-  # ---------------------------------------------------------------------------
-  poller:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-    container_name: carbontrace-poller
-    restart: unless-stopped
-    command: ["python", "-m", "worker.run"]
-    env_file:
-      - .env
-    environment:
-      - LOGSTASH_URL=http://logstash:8080
-      - ELASTICSEARCH_URL=http://elasticsearch:9200
-    depends_on:
-      - logstash
     networks:
       - carbontrace
 

@@ -18,3 +18,6 @@ export const useTimeseries = (params) =>
 
 export const useAnomalies = (params) =>
   useQuery({ queryKey: ["anomalies", params], queryFn: get("/anomalies", params) });
+
+export const useCrossVerify = (params) =>
+  useQuery({ queryKey: ["crossverify", params], queryFn: get("/emissions/crossverify", params) });
