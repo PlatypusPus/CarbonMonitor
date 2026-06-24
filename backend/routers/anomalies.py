@@ -2,8 +2,7 @@
 
 from typing import Any
 
-from elasticsearch import ConnectionError as ESConnectionError
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, Query
 
 from dependencies import get_current_user
 from models.user import User
@@ -20,10 +19,4 @@ def list_anomalies(
     limit: int = Query(50, ge=1, le=200),
     _user: User = Depends(get_current_user),
 ) -> Any:
-    try:
-        return anomaly_service.query_anomalies(metric, facility, limit)
-    except ESConnectionError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Elasticsearch unavailable",
-        ) from exc
+    return anomaly_service.query_anomalies(metric, facility, limit)

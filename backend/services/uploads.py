@@ -1,5 +1,17 @@
 """Parse uploaded emission CSVs and index them into Elasticsearch."""
 
+# TODO (separate task): Refactor this module to accept raw activity data instead of pre-computed values.
+#
+# Current behaviour: caller provides a pre-computed "value" field (already a CO2e number or a
+# sensor reading in unknown units), which is indexed as-is into Elasticsearch.
+#
+# Target behaviour: caller provides raw consumption quantities (e.g. kWh, litres of diesel)
+# along with activity_type and unit. This module should write an ActivityRecord to Postgres
+# and hand off to services.calculation.calculate_emissions() to derive co2e_kg.
+#
+# Do NOT change the current CSV parsing logic until the new ActivityRecord model and
+# calculation service are implemented — the two paths should be switched atomically.
+
 import csv
 import io
 from datetime import datetime

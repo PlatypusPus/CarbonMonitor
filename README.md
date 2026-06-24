@@ -1,15 +1,9 @@
 # CarbonTrace
-
-CarbonTrace is a carbon-emission monitoring and ESG reporting tool. It collects emission data from a few public APIs pushes that data through Logstash into Elasticsearch, runs an Isolation Forest over it to catch unusual spikes, and serves the whole thing to a React dashboard. You can also export an ESG summary as a PDF.
+Facility-level activity data (electricity bills, fuel/LPG purchase records) is entered manually, uploaded as CSV, or extracted from bill scans via OCR. A calculation engine converts that activity data into Scope 1 / Scope 2 CO2e using region-specific (electricity) or fuel-type-specific (direct combustion) emission factors. Results feed a dashboard, anomaly detection, rule-based reduction recommendations, a what-if scenario simulator, and a BRSR Core-style PDF report.
 
 ## How it works
 
-![CarbonTrace architecture](assets/architecture-diagram.png)
-
-There are two data stores on purpose: PostgreSQL handles the relational, transactional
-stuff (accounts, roles, upload records), and Elasticsearch handles the high-volume
-time-series readings. The poller is its own process so it runs once, not once per web
-worker.
+![System flow](assets/Flow.png)
 
 ## Tech stack
 
@@ -24,7 +18,6 @@ worker.
 - FastAPI + Uvicorn
 - Pydantic v2 (request/response models + settings)
 - SQLAlchemy 2.0 with psycopg (Postgres)
-- APScheduler + httpx for the poller
 
 **Auth**
 - Short-lived JWT access tokens (python-jose), kept in memory on the client
@@ -32,46 +25,35 @@ worker.
 - Passwords hashed with bcrypt (passlib)
 - Roles: Admin, Facility Manager, Auditor
 
-**Data + pipeline**
-- PostgreSQL — users, roles, facilities, sessions, uploads
-- Elasticsearch — `emissions-live`, `emissions-uploads`, `emissions-anomalies`
-- Logstash for ingestion, Kibana for poking at the indices
+**Data + calculation**
+- PostgreSQL — users, roles, facilities, activity records, emission factors,
+  calculated emissions, anomalies, recommendations, scenarios
+- OCR extraction for bill scans (electricity, diesel/fuel, LPG)
+- Emission factor lookup: region-specific for electricity (Scope 2),
+  fuel-type-specific for direct combustion (Scope 1)
 
 **Everything else**
-- scikit-learn (Isolation Forest), NumPy, pandas
-- ReportLab for the PDF reports
-- Docker Compose, Nginx, aimed at a single GCP e2-medium VM
+- scikit-learn (Isolation Forest) for anomaly detection on calculated emissions
+- ReportLab for the BRSR Core-aligned PDF report
+- Docker Compose, Nginx
 
 ## Requirements
 
-To run the full stack with Docker (the easy path):
-- Docker Engine 24+ with Compose v2 (Docker Desktop on Windows/macOS is fine)
-- ~4 GB of RAM free for the containers. Elasticsearch is capped at a 512 MB heap,
-  but the JVMs plus everything else need headroom — 8 GB is comfortable.
-- ~3 GB of free disk for the ELK images
-- A `.env` file (copy `.env.example`). External API keys are optional; without them
-  the poller just uses the sensor simulator.
-
-To work on the code directly (without Docker):
 - Backend: Python 3.11+ and `uv`
 - Frontend: Node 20+ and npm
-- A reachable PostgreSQL and Elasticsearch if you want the data paths to work
-  (pointing at the Docker ones is fine)
+- A reachable PostgreSQL instance
+- A `.env` file (copy `.env.example`)
 
 ## Running it
 
 With Docker:
 
 ```bash
-cp .env.example .env     # then fill in values; API keys can stay blank
+cp .env.example .env
 docker compose up --build
 ```
 
-Once it's up:
-- Dashboard (through Nginx): http://localhost
-- Kibana: http://localhost:5601
-
-The first poll runs on startup, so data starts showing up within a minute or two.
+Dashboard (through Nginx): http://localhost
 
 Create the first user (there's no public sign-up):
 
@@ -93,24 +75,21 @@ uv run uvicorn main:app --reload
 
 ```
 backend/      FastAPI app
-  routers/    HTTP endpoints (auth, emissions, anomalies, upload, reports)
+  routers/    HTTP endpoints (auth, facilities, activity, emissions,
+              anomalies, recommendations, scenarios, reports)
   models/     SQLAlchemy models
   schemas/    Pydantic request/response models
-  services/   ES queries, anomaly engine, PDF generation
-  worker/     the standalone poller (sensor sim + API clients)
+  services/   calculation engine, OCR pipeline, anomaly engine,
+              recommendation rules, scenario simulator, PDF generation
 frontend/     React + Vite dashboard
-elk/          Logstash pipeline + Kibana
 nginx/        reverse proxy config
 docker-compose.yml
 ```
 
 ## Contributing
 
-The repo is small and the workflow is light, but a few rules keep it tidy.
-
-**Open an issue first.** Before starting work, file a GitHub issue (use the
-"Feature work" or "Bug" template) describing what you're doing and which part of the
-system it touches. That's how we avoid two people on the same thing.
+**Open an issue first.** Before starting work, file a GitHub issue describing
+what you're doing and which part of the system it touches.
 
 **Branches**
 - `main` — stable, only updated through pull requests
@@ -127,22 +106,18 @@ git checkout -b feature/my-thing
 `feat:`, `fix:`, `chore:`, `ci:`, `docs:`. One logical change per commit.
 
 **Pull requests.** Open the PR against `dev` (not `main`), link the issue with
-`Closes #123`, and make sure CI is green before asking for a merge. The PR template
-has a short checklist; the things that actually matter:
+`Closes #123`, and make sure CI is green before asking for a merge.
 - no secrets committed (use `.env`, and update `.env.example` if you add a variable)
 - backend routes have Pydantic request/response models
 - React components are function components with hooks
 - the linter passes
 
 **CI.** GitHub Actions runs on every PR into `dev`/`main`: the backend gets linted
-(`ruff`) and import-checked, and the frontend dependencies get installed. Broken
-checks block the merge.
+(`ruff`) and import-checked, and the frontend dependencies get installed.
 
 **Code style.** Backend is formatted/linted with `ruff` (line length 100). Keep
 comments minimal and about the code, not the roadmap. Don't hardcode secrets and
 don't run anything with debug mode on in production.
-
-To set up the backend for development:
 
 ```bash
 cd backend

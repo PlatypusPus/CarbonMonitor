@@ -25,5 +25,5 @@ ENV PATH="/app/.venv/bin:$PATH"
 
 EXPOSE 8000
 
-# 4 Uvicorn workers — matches the load plan (5–20 concurrent demo users).
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "4"]
+# 2 Uvicorn workers is plenty for a demo; bump for higher concurrency.
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "2"]
