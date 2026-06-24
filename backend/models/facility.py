@@ -29,5 +29,8 @@ class Facility(Base):
         DateTime(timezone=True), server_default=func.now()
     )
 
+    facility_type: Mapped[str | None] = mapped_column(String(100))
+    # TODO: define allowed facility_type values (e.g. "office", "warehouse", "data_center")
+
     users: Mapped[list[User]] = relationship(back_populates="facility")
     uploads: Mapped[list[Upload]] = relationship(back_populates="facility")
