@@ -10,7 +10,7 @@ body:
       placeholder: "One sentence."
     validations:
       required: true
-
+    
   - type: textarea
     id: scope
     attributes:
