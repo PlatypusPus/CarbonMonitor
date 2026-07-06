@@ -1,20 +1,31 @@
 # CarbonTrace Backend
 
-FastAPI service: auth, emissions API, anomaly engine, ESG PDF reports, and the
-APScheduler worker that polls external carbon APIs.
+FastAPI service: auth, emissions API, anomaly detection, ESG PDF reports.
 
-## Local development (with uv)
+## Setup
 
 ```bash
-cd backend
-uv sync                 # create .venv and install all deps (incl. dev tools)
+uv sync                          # create .venv and install deps
+cp ../.env.example ../.env       # fill in DATABASE_URL and JWT_SECRET_KEY
 uv run uvicorn main:app --reload
 ```
 
-Then open http://localhost:8000/health and http://localhost:8000/docs.
+Swagger UI: http://localhost:8000/docs  
+Health check: http://localhost:8000/health
 
 ## Layout
-- `routers/`  — API endpoints (auth, emissions, anomalies, reports, upload)
-- `models/`   — SQLAlchemy models (User, Facility, Upload)
-- `services/` — ES queries, anomaly engine, PDF generation
-- `worker/`   — APScheduler poller for the external APIs
+
+```
+routers/    HTTP endpoints (auth, facilities, activity, calculations,
+            emissions, anomalies, recommendations, scenarios, reports, upload)
+models/     SQLAlchemy models (Postgres)
+schemas/    Pydantic request/response models
+services/   calculation engine, OCR pipeline, anomaly detection,
+            recommendation rules, scenario simulator, PDF generation
+```
+
+## Lint
+
+```bash
+uv run ruff check .
+```
