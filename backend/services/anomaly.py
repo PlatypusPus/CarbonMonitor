@@ -1,25 +1,27 @@
-"""Isolation Forest anomaly detection over emission readings."""
+"""Isolation Forest anomaly detection over emission readings.
+
+The detect() function is pure and framework-independent — keep it that way.
+
+TODO: _fetch_recent(), run_detection(), and query_anomalies() previously used Elasticsearch
+(emissions-live / emissions-anomalies indices). ES has been removed. Migrate to:
+  - _fetch_recent()    → query calculated_emissions from Postgres for the trailing window
+  - run_detection()    → persist flagged results to an anomaly table in Postgres (not yet modelled)
+  - query_anomalies()  → query that Postgres anomaly table
+"""
 
 import logging
 from collections import defaultdict
 from typing import Any
 
 import numpy as np
-from elasticsearch import ConnectionError as ESConnectionError
-from elasticsearch import NotFoundError
-from elasticsearch.helpers import bulk, scan
 from sklearn.ensemble import IsolationForest
-
-from services.emissions import LIVE_INDEX
-from services.es import get_es_client
 
 logger = logging.getLogger(__name__)
 
 MIN_SAMPLES = 20
 RANDOM_STATE = 42
 CONTAMINATION = 0.06
-ANOMALY_INDEX = "emissions-anomalies"
-TRAIN_WINDOW = "now-7d"
+TRAIN_WINDOW_DAYS = 7
 
 
 def detect(
@@ -27,6 +29,12 @@ def detect(
     min_samples: int = MIN_SAMPLES,
     contamination: float | str = CONTAMINATION,
 ) -> list[dict[str, Any]]:
+    """Pure Isolation Forest over a list of reading dicts.
+
+    Each reading must have 'value', 'metric', and 'facility_name' keys.
+    Returns the subset flagged as anomalies, each extended with
+    'is_anomaly', 'anomaly_score', and 'expected_value'.
+    """
     groups: dict[tuple[Any, Any], list[dict[str, Any]]] = defaultdict(list)
     for reading in readings:
         groups[(reading.get("metric"), reading.get("facility_name"))].append(reading)
@@ -56,40 +64,12 @@ def detect(
     return anomalies
 
 
-def _fetch_recent(index: str, window: str = TRAIN_WINDOW) -> list[dict[str, Any]]:
-    body = {"query": {"range": {"@timestamp": {"gte": window}}}}
-    readings: list[dict[str, Any]] = []
-    for hit in scan(get_es_client(), index=index, query=body, preserve_order=False):
-        source = dict(hit["_source"])
-        source["doc_id"] = hit["_id"]
-        readings.append(source)
-    return readings
-
-
-def run_detection(live_index: str = LIVE_INDEX, anomaly_index: str = ANOMALY_INDEX) -> int:
-    try:
-        readings = _fetch_recent(live_index)
-    except NotFoundError:
-        return 0
-    except ESConnectionError:
-        logger.warning("Anomaly detection skipped: Elasticsearch unavailable")
-        return 0
-
-    anomalies = detect(readings)
-    if not anomalies:
-        return 0
-
-    actions = []
-    for anomaly in anomalies:
-        record = dict(anomaly)
-        doc_id = record.pop("doc_id", None)
-        action: dict[str, Any] = {"_index": anomaly_index, "_source": record}
-        if doc_id is not None:
-            action["_id"] = doc_id
-        actions.append(action)
-    success, _ = bulk(get_es_client(), actions)
-    logger.info("Indexed %d anomaly record(s)", success)
-    return success
+def run_detection() -> int:
+    # TODO: fetch calculated_emissions from Postgres for the trailing TRAIN_WINDOW_DAYS,
+    # call detect(), persist flagged rows to a Postgres anomaly table (model not yet defined).
+    # Return count of anomalies written.
+    logger.warning("run_detection: not yet implemented — Postgres anomaly table pending")
+    return 0
 
 
 def query_anomalies(
@@ -97,24 +77,5 @@ def query_anomalies(
     facility: str | None = None,
     limit: int = 50,
 ) -> list[dict[str, Any]]:
-    filters: list[dict[str, Any]] = []
-    if metric:
-        filters.append({"term": {"metric": metric}})
-    if facility:
-        filters.append({"term": {"facility_name": facility}})
-    query = {"bool": {"filter": filters}} if filters else {"match_all": {}}
-    try:
-        response = get_es_client().search(
-            index=ANOMALY_INDEX,
-            query=query,
-            sort=[{"@timestamp": {"order": "desc"}}],
-            size=limit,
-        )
-    except NotFoundError:
-        return []
-    records = []
-    for hit in response["hits"]["hits"]:
-        source = dict(hit["_source"])
-        source["timestamp"] = source.pop("@timestamp", source.get("timestamp"))
-        records.append(source)
-    return records
+    # TODO: query Postgres anomaly table once run_detection() is implemented.
+    return []

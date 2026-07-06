@@ -1,7 +1,7 @@
 [project]
 name = "carbontrace-backend"
 version = "0.1.0"
-description = "CarbonTrace backend — FastAPI API, auth, anomaly engine, ESG reports, API poller."
+description = "CarbonTrace backend — FastAPI API, auth, anomaly engine, ESG reports."
 readme = "README.md"
 requires-python = ">=3.11"
 
@@ -25,11 +25,7 @@ dependencies = [
     "bcrypt>=4.0.1,<4.1",             # pinned: 4.1+ trips a passlib version-read warning
     "python-multipart>=0.0.9",         # form/file uploads
 
-    # --- Elasticsearch (emission time-series) ---
-    "elasticsearch>=8.13,<9",
-
-    # --- Background polling of external APIs ---
-    "apscheduler>=3.10",
+    # --- HTTP client (OCR, external integrations) ---
     "httpx>=0.27",
 
     # --- ML anomaly detection ---

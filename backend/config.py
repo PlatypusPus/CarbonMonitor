@@ -19,18 +19,10 @@ class Settings(BaseSettings):
 
     database_url: str = "postgresql+psycopg://carbontrace:carbontrace@localhost:5432/carbontrace"
 
-    elasticsearch_url: str = "http://localhost:9200"
-    logstash_url: str = "http://localhost:8080"
-
     jwt_secret_key: str = "dev-insecure-change-me"
     jwt_algorithm: str = "HS256"
     access_token_expire_minutes: int = 15
     refresh_token_expire_days: int = 7
-
-    electricity_maps_api_key: str = ""
-    carbon_interface_api_key: str = ""
-    openweathermap_api_key: str = ""
-    poll_interval_minutes: int = 5
 
     @property
     def cors_origins_list(self) -> list[str]:

@@ -1,27 +1,21 @@
-"""Parse uploaded emission CSVs and index them into Elasticsearch."""
+"""Parse uploaded emission CSVs.
 
-# TODO (separate task): Refactor this module to accept raw activity data instead of pre-computed values.
-#
-# Current behaviour: caller provides a pre-computed "value" field (already a CO2e number or a
-# sensor reading in unknown units), which is indexed as-is into Elasticsearch.
-#
-# Target behaviour: caller provides raw consumption quantities (e.g. kWh, litres of diesel)
-# along with activity_type and unit. This module should write an ActivityRecord to Postgres
-# and hand off to services.calculation.calculate_emissions() to derive co2e_kg.
-#
-# Do NOT change the current CSV parsing logic until the new ActivityRecord model and
-# calculation service are implemented — the two paths should be switched atomically.
+TODO: Once the ActivityRecord pipeline is ready, replace index_upload_readings() with:
+  - validate each row against ActivityRecordCreate schema
+  - write one ActivityRecord per row (source="csv", confirmed_by_user=False)
+  - trigger services.calculation.calculate_emissions() for each
+  - do NOT index to Elasticsearch (removed from stack)
+
+The CSV column names (timestamp/metric/value) will also need to change to match
+ActivityRecord fields (period_start, activity_type, quantity, unit).
+Switch the two halves atomically — don't half-migrate.
+"""
 
 import csv
 import io
 from datetime import datetime
 from typing import Any
 
-from elasticsearch.helpers import bulk
-
-from services.es import get_es_client
-
-UPLOAD_INDEX = "emissions-uploads"
 REQUIRED_COLUMNS = {"timestamp", "metric", "value"}
 
 
@@ -70,12 +64,6 @@ def parse_emissions_csv(content: bytes) -> list[dict[str, Any]]:
 
 
 def index_upload_readings(upload_id: str, rows: list[dict[str, Any]]) -> int:
-    actions = [
-        {
-            "_index": UPLOAD_INDEX,
-            "_source": {**row, "upload_id": upload_id, "@timestamp": row["timestamp"]},
-        }
-        for row in rows
-    ]
-    success, _ = bulk(get_es_client(), actions)
-    return success
+    # TODO: replace with ActivityRecord creation + calculation pipeline (see module docstring)
+    # Returning 0 until the new pipeline is in place — the Upload record is still written to Postgres.
+    return 0

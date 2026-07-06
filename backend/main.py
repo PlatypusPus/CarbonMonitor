@@ -3,16 +3,13 @@
 import logging
 from contextlib import asynccontextmanager
 
-from elasticsearch import ConnectionError as ESConnectionError
-from fastapi import FastAPI, Request
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
 
 from config import get_settings
 from database import init_db
 from routers import anomalies, auth, emissions, reports, upload
 from routers import activity, calculations, facilities, recommendations, scenarios
-from services.es import ensure_index_template
 
 logger = logging.getLogger(__name__)
 
@@ -20,10 +17,6 @@ logger = logging.getLogger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     init_db()
-    try:
-        ensure_index_template()
-    except Exception:
-        logger.exception("Could not ensure Elasticsearch index template; continuing")
     yield
 
 
@@ -38,7 +31,6 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
     )
 
-    # allow_credentials lets the browser send the refresh-token cookie cross-origin.
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors_origins_list,
@@ -46,10 +38,6 @@ def create_app() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
-
-    @app.exception_handler(ESConnectionError)
-    async def _es_unavailable(request: Request, exc: ESConnectionError) -> JSONResponse:
-        return JSONResponse(status_code=503, content={"detail": "Elasticsearch unavailable"})
 
     app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
     app.include_router(emissions.router, prefix="/api/emissions", tags=["emissions"])
