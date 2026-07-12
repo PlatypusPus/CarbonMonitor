@@ -1,4 +1,11 @@
-import { Activity, AlertTriangle, BarChart3, FileCheck, FileText } from "lucide-react";
+import {
+  Activity,
+  AlertTriangle,
+  BarChart3,
+  FileCheck,
+  FileText,
+  UploadCloud,
+} from "lucide-react";
 import { NavLink } from "react-router-dom";
 
 const links = [
@@ -6,6 +13,7 @@ const links = [
   { to: "/trends", label: "Trends & Analytics", icon: BarChart3 },
   { to: "/anomalies", label: "Anomaly Log", icon: AlertTriangle },
   { to: "/cross-verify", label: "Cross-Verification", icon: FileCheck },
+  { to: "/ocr", label: "OCR Intake", icon: UploadCloud },
   { to: "/esg-report", label: "ESG Report", icon: FileText },
 ];
 

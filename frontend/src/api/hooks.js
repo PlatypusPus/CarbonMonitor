@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 
 import client from "./client";
 
@@ -21,3 +21,23 @@ export const useAnomalies = (params) =>
 
 export const useCrossVerify = (params) =>
   useQuery({ queryKey: ["crossverify", params], queryFn: get("/emissions/crossverify", params) });
+
+export const useCreateOCRDraft = () =>
+  useMutation({
+    mutationFn: async (file) => {
+      const formData = new FormData();
+      formData.append("file", file);
+      const { data } = await client.post("/activity/ocr", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      return data;
+    },
+  });
+
+export const useConfirmOCRDraft = () =>
+  useMutation({
+    mutationFn: async (draftId) => {
+      const { data } = await client.post(`/activity/ocr/${draftId}/confirm`);
+      return data;
+    },
+  });
