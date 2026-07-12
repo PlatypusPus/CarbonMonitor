@@ -3,6 +3,18 @@ import { useMemo, useState } from "react";
 
 import { useConfirmOCRDraft, useCreateOCRDraft } from "../api/hooks";
 
+function messageFromError(err, fallback) {
+  const detail = err?.response?.data?.detail;
+  if (typeof detail === "string" && detail.trim()) return detail;
+  if (Array.isArray(detail) && detail.length > 0) {
+    return detail
+      .map((item) => (typeof item === "string" ? item : item?.msg || JSON.stringify(item)))
+      .join("; ");
+  }
+  if (typeof err?.message === "string" && err.message.trim()) return err.message;
+  return fallback;
+}
+
 function Field({ label, value }) {
   return (
     <div className="rounded-lg border border-line bg-canvas px-4 py-3">
@@ -44,7 +56,7 @@ export default function OCR() {
     try {
       await createDraft.mutateAsync(file);
     } catch (err) {
-      setError(err?.response?.data?.detail || "Failed to extract OCR draft.");
+      setError(messageFromError(err, "Failed to extract OCR draft."));
     }
   }
 
@@ -55,7 +67,7 @@ export default function OCR() {
       const record = await confirmDraft.mutateAsync(draft.id);
       setConfirmed(record);
     } catch (err) {
-      setError(err?.response?.data?.detail || "Failed to confirm OCR draft.");
+      setError(messageFromError(err, "Failed to confirm OCR draft."));
     }
   }
 
