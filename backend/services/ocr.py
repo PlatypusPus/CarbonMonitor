@@ -23,9 +23,14 @@ def _extract_pdf_text(file: bytes) -> str:
     if text:
         return text
 
-    import fitz
-    import pytesseract
-    from PIL import Image
+    try:
+        import fitz
+        import pytesseract
+        from PIL import Image
+    except Exception as exc:
+        raise ValueError(
+            "Scanned PDF OCR is unavailable: install pymupdf + pytesseract and ensure tesseract is installed"
+        ) from exc
 
     doc = fitz.open(stream=file, filetype="pdf")
     parts: list[str] = []
@@ -34,6 +39,8 @@ def _extract_pdf_text(file: bytes) -> str:
             pix = page.get_pixmap(dpi=300, alpha=False)
             image = Image.open(BytesIO(pix.tobytes("png")))
             parts.append(pytesseract.image_to_string(image, config="--psm 6"))
+    except Exception as exc:
+        raise ValueError("Failed to OCR scanned PDF pages") from exc
     finally:
         doc.close()
     text = "\n".join(parts).strip()
