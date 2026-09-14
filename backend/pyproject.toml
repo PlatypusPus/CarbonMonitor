@@ -34,6 +34,9 @@ dependencies = [
 
     # --- ESG PDF export ---
     "reportlab>=4.2",
+
+    # --- XLSX parsing (upload pipeline) ---
+    "openpyxl>=3.1",
 ]
 
 [dependency-groups]
