@@ -8,6 +8,7 @@ import Dashboard from "./pages/Dashboard";
 import ESGReport from "./pages/ESGReport";
 import Login from "./pages/Login";
 import Trends from "./pages/Trends";
+import Upload from "./pages/Upload";
 
 export default function App() {
   return (
@@ -25,6 +26,7 @@ export default function App() {
         <Route path="/anomalies" element={<Anomalies />} />
         <Route path="/cross-verify" element={<CrossVerify />} />
         <Route path="/esg-report" element={<ESGReport />} />
+        <Route path="/upload" element={<Upload />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
