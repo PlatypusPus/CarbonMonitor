@@ -62,18 +62,26 @@ def _seed_defaults() -> None:
         for u in db.query(User).filter(User.facility_id.is_(None)).all():
             u.facility_id = fac.id
 
-        # electricity emission factor (placeholder — needs authoritative source)
-        if not db.query(EmissionFactor).filter(
-            EmissionFactor.activity_type == "electricity"
-        ).first():
-            db.add(
-                EmissionFactor(
-                    activity_type="electricity",
-                    region=None,
-                    factor_value=0.82,
-                    unit="kg CO2e / kWh",
-                    valid_from=datetime(2020, 1, 1, tzinfo=timezone.utc),
+        # emission factors (placeholders — replace with DEFRA/EPA authoritative values)
+        defaults = [
+            ("electricity", 0.82, "kg CO2e / kWh"),
+            ("diesel", 2.68, "kg CO2e / litre"),
+            ("petrol", 2.31, "kg CO2e / litre"),
+            ("lpg", 1.51, "kg CO2e / litre"),
+        ]
+        for activity_type, factor_value, unit in defaults:
+            if not db.query(EmissionFactor).filter(
+                EmissionFactor.activity_type == activity_type,
+                EmissionFactor.region.is_(None),
+            ).first():
+                db.add(
+                    EmissionFactor(
+                        activity_type=activity_type,
+                        region=None,
+                        factor_value=factor_value,
+                        unit=unit,
+                        valid_from=datetime(2020, 1, 1, tzinfo=timezone.utc),
+                    )
                 )
-            )
 
         db.commit()

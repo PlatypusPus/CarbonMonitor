@@ -9,6 +9,7 @@ from uuid import UUID
 from sqlalchemy.orm import Session
 
 REQUIRED_COLUMNS = {"timestamp", "metric", "value"}
+ALLOWED_METRICS = {"electricity", "diesel", "petrol", "lpg"}
 
 
 def _parse_timestamp(value: str | None) -> str:
@@ -36,6 +37,8 @@ def parse_emissions_csv(content: bytes) -> list[dict[str, Any]]:
         metric = (raw.get("metric") or "").strip()
         if not metric:
             raise ValueError(f"row {line_no}: 'metric' is required")
+        if metric not in ALLOWED_METRICS:
+            raise ValueError(f"row {line_no}: unknown metric '{metric}' — expected one of {', '.join(sorted(ALLOWED_METRICS))}")
         try:
             timestamp = _parse_timestamp(raw.get("timestamp"))
         except ValueError as exc:
