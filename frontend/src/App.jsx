@@ -7,6 +7,7 @@ import CrossVerify from "./pages/CrossVerify";
 import Dashboard from "./pages/Dashboard";
 import ESGReport from "./pages/ESGReport";
 import Login from "./pages/Login";
+import OCR from "./pages/OCR";
 import Trends from "./pages/Trends";
 
 export default function App() {
@@ -24,6 +25,7 @@ export default function App() {
         <Route path="/trends" element={<Trends />} />
         <Route path="/anomalies" element={<Anomalies />} />
         <Route path="/cross-verify" element={<CrossVerify />} />
+        <Route path="/ocr" element={<OCR />} />
         <Route path="/esg-report" element={<ESGReport />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
