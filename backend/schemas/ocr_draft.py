@@ -11,6 +11,9 @@ class OCRDraftResponse(BaseModel):
 
     id: uuid.UUID
     source_filename: str
+    source_type: str = "ocr"
+    source_row: int | None = None
+    source_column: str | None = None
     facility_id: uuid.UUID
     period_start: datetime
     period_end: datetime
