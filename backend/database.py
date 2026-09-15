@@ -27,7 +27,43 @@ def init_db() -> None:
     import models  # noqa: F401
 
     Base.metadata.create_all(bind=engine)
+    _ensure_ingest_schema()
     _seed_roles()
+
+
+def _ensure_ingest_schema() -> None:
+    """Idempotently apply ingest-schema additions to pre-existing databases.
+
+    The project has no alembic migrations — ``create_all`` only creates new
+    tables, so columns/enum values added later need explicit additive DDL.
+    Every statement here is a no-op when the schema is already up to date.
+    """
+    from sqlalchemy import text
+
+    with SessionLocal() as db:
+        db.execute(
+            text(
+                "ALTER TABLE ocr_drafts "
+                "ADD COLUMN IF NOT EXISTS source_type VARCHAR(20) NOT NULL DEFAULT 'ocr'"
+            )
+        )
+        db.execute(
+            text(
+                "ALTER TABLE ocr_drafts ADD COLUMN IF NOT EXISTS source_row INTEGER"
+            )
+        )
+        db.execute(
+            text(
+                "ALTER TABLE ocr_drafts ADD COLUMN IF NOT EXISTS source_column VARCHAR(200)"
+            )
+        )
+        try:
+            db.execute(text("ALTER TYPE activity_source_enum ADD VALUE 'excel'"))
+        except Exception:
+            # Already exists (fresh DB created from the current model) — safe.
+            db.rollback()
+        else:
+            db.commit()
 
 
 def _seed_roles() -> None:
