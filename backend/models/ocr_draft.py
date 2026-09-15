@@ -6,7 +6,7 @@ import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import DateTime, ForeignKey, String, Uuid, func
+from sqlalchemy import DateTime, ForeignKey, Integer, String, Uuid, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from database import Base
@@ -24,6 +24,11 @@ class OCRDraft(Base):
         ForeignKey("users.id", ondelete="CASCADE"), nullable=False
     )
     source_filename: Mapped[str] = mapped_column(String(255), nullable=False)
+    # Ingest provenance. source_type defaults to "ocr" so the existing OCR flow
+    # is unchanged; Excel imports set it to "excel" plus the original row/column.
+    source_type: Mapped[str] = mapped_column(String(20), default="ocr", nullable=False)
+    source_row: Mapped[int | None] = mapped_column(Integer)
+    source_column: Mapped[str | None] = mapped_column(String(200))
     facility_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
     period_start: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     period_end: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
