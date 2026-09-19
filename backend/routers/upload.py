@@ -1,4 +1,4 @@
-"""CSV data uploads for cross-verification against API-sourced emissions."""
+"""CSV/XLSX data uploads for cross-verification against API-sourced emissions."""
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from sqlalchemy.orm import Session
@@ -8,7 +8,11 @@ from dependencies import require_role
 from models.upload import Upload
 from models.user import User
 from schemas.upload import UploadResponse
-from services.uploads import index_upload_readings, parse_emissions_csv
+from services.uploads import (
+    convert_xlsx_to_csv_bytes,
+    index_upload_readings,
+    parse_emissions_csv,
+)
 
 router = APIRouter()
 
@@ -20,6 +24,17 @@ async def upload_csv(
     user: User = Depends(require_role("admin", "facility_manager")),
 ) -> Upload:
     content = await file.read()
+
+    # detect xlsx and convert to CSV for pipeline
+    if (file.filename or "").lower().endswith(".xlsx"):
+        try:
+            content = convert_xlsx_to_csv_bytes(content)
+        except Exception as exc:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=f"Failed to parse xlsx: {exc}",
+            ) from exc
+
     try:
         rows = parse_emissions_csv(content)
     except ValueError as exc:
@@ -39,7 +54,7 @@ async def upload_csv(
     db.refresh(record)
 
     try:
-        index_upload_readings(str(record.id), rows)
+        index_upload_readings(db, str(record.id), user.facility_id, rows)
     except Exception:
         record.status = "failed"
         db.commit()

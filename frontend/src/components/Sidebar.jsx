@@ -1,4 +1,4 @@
-import { Activity, AlertTriangle, BarChart3, FileCheck, FileText } from "lucide-react";
+import { Activity, AlertTriangle, BarChart3, FileCheck, FileText, Upload } from "lucide-react";
 import { NavLink } from "react-router-dom";
 
 const links = [
@@ -7,6 +7,7 @@ const links = [
   { to: "/anomalies", label: "Anomaly Log", icon: AlertTriangle },
   { to: "/cross-verify", label: "Cross-Verification", icon: FileCheck },
   { to: "/esg-report", label: "ESG Report", icon: FileText },
+  { to: "/upload", label: "Upload Data", icon: Upload },
 ];
 
 export default function Sidebar() {

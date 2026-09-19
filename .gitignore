@@ -32,6 +32,10 @@ elk/logstash/data/
 *.log
 logs/
 
+# --- Uploads / sample data (never commit real bills) ---
+*.xlsx
+*.xls
+
 # --- OS / editor ---
 .DS_Store
 Thumbs.db
