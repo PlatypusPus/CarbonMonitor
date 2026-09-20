@@ -63,13 +63,13 @@ def run():
         
         # Science Building Q1
         {"facility": "Science Building", "period": "2026-Q1", "type": "electricity", "qty": 400000, "unit": "kWh"},
-        {"facility": "Science Building", "period": "2026-Q1", "type": "lpg", "qty": 2000, "unit": "litre"},
+        {"facility": "Science Building", "period": "2026-Q1", "type": "lpg", "qty": 2000, "unit": "kg"},
         # Science Building Q2
         {"facility": "Science Building", "period": "2026-Q2", "type": "electricity", "qty": 410000, "unit": "kWh"},
-        {"facility": "Science Building", "period": "2026-Q2", "type": "lpg", "qty": 1900, "unit": "litre"},
+        {"facility": "Science Building", "period": "2026-Q2", "type": "lpg", "qty": 1900, "unit": "kg"},
         # Science Building Q3 - BIG SPIKE (Anomaly & Spike Recommendation should trigger)
         {"facility": "Science Building", "period": "2026-Q3", "type": "electricity", "qty": 900000, "unit": "kWh"},
-        {"facility": "Science Building", "period": "2026-Q3", "type": "lpg", "qty": 2100, "unit": "litre"},
+        {"facility": "Science Building", "period": "2026-Q3", "type": "lpg", "qty": 2100, "unit": "kg"},
     ]
     
     act_records = []
@@ -126,7 +126,9 @@ def run():
     print("Baseline scenario (900,000 kWh):", baseline)
     # What if we installed solar panels and reduced electricity by 300,000 kWh?
     modified = {"quantity": 600000}
-    res = run_scenario(db, baseline, modified)
+    fac = facilities["Science Building"]
+    period = periods["2026-Q3"]
+    res = run_scenario(db, baseline, modified, fac.region_code, period.end_date)
     print(f"Scenario Result (600,000 kWh): {res['result_co2e_kg']} kg CO2e (Scope {res['scope']})")
     
     db.close()

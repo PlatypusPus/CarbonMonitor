@@ -98,7 +98,7 @@ def run_detection(db: Session) -> int:
             "source": record.source,
             "region": fac.region_code,
             "calculated_emission_id": calc.id,
-            "timestamp": calc.calculated_at
+            "timestamp": record.period_end
         })
         
     anomalies = detect(readings)
@@ -110,7 +110,7 @@ def run_detection(db: Session) -> int:
                 select(Anomaly).where(
                     Anomaly.calculated_emission_id == anomaly_data["calculated_emission_id"]
                 )
-            ).scalar_one_or_none()
+            ).scalars().first()
             if not existing:
                 db_anomaly = Anomaly(
                     timestamp=anomaly_data["timestamp"],

@@ -8,6 +8,7 @@ from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib.units import cm
 from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
+from sqlalchemy.orm import Session
 
 from services.anomaly import query_anomalies
 from services.emissions import query_summary
@@ -41,9 +42,9 @@ def _table(rows: list[list[str]]) -> Table:
     return table
 
 
-def generate_esg_pdf() -> bytes:
-    summary = query_summary()
-    anomalies = query_anomalies(limit=50)
+def generate_esg_pdf(db: Session) -> bytes:
+    summary = query_summary(db)
+    anomalies = query_anomalies(db, limit=50)
 
     buffer = BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=A4, title="CarbonTrace ESG Report")

@@ -14,29 +14,24 @@ dependencies = [
     "pydantic>=2.7",
     "pydantic-settings>=2.3",      # typed settings loaded from .env
     "email-validator>=2.1",        # backs pydantic EmailStr
-
     # --- PostgreSQL (users/auth/uploads) ---
     "sqlalchemy>=2.0",
     "psycopg[binary]>=3.1",        # modern Postgres driver
-
     # --- Auth ---
     "python-jose[cryptography]>=3.3",  # JWT encode/decode
     "passlib[bcrypt]>=1.7",            # password hashing
     "bcrypt>=4.0.1,<4.1",             # pinned: 4.1+ trips a passlib version-read warning
     "python-multipart>=0.0.9",         # form/file uploads
-
     # --- HTTP client (OCR, external integrations) ---
     "httpx>=0.27",
-
     # --- ML anomaly detection ---
     "scikit-learn>=1.5",
     "numpy>=1.26",
-
     # --- ESG PDF export ---
     "reportlab>=4.2",
-
     # --- XLSX parsing (upload pipeline) ---
     "openpyxl>=3.1",
+    "alembic>=1.20.0",
 ]
 
 [dependency-groups]

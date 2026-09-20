@@ -16,6 +16,12 @@ class FacilityCreate(BaseModel):
     region_code: str | None = None
     facility_type: FacilityType | None = None
 
+class FacilityUpdate(BaseModel):
+    name: str | None = None
+    location: str | None = None
+    region_code: str | None = None
+    facility_type: FacilityType | None = None
+
 
 class FacilityResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)

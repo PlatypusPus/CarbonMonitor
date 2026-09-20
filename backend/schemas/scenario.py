@@ -9,6 +9,8 @@ from pydantic import BaseModel, ConfigDict, field_validator
 
 
 class ScenarioInputsOverride(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     quantity: float | None = None
     activity_type: str | None = None
     unit: str | None = None

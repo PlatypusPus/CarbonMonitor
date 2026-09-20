@@ -9,6 +9,8 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from database import get_db
+from dependencies import get_current_user, check_facility_access
+from models.user import User
 from models.scenario import Scenario
 from models.activity_record import ActivityRecord
 from schemas.scenario import ScenarioCreate, ScenarioResponse
@@ -18,7 +20,8 @@ router = APIRouter()
 
 
 @router.post("/run", response_model=ScenarioResponse, status_code=status.HTTP_201_CREATED)
-def run_scenario_endpoint(scenario_in: ScenarioCreate, db: Session = Depends(get_db)) -> Any:
+def run_scenario_endpoint(scenario_in: ScenarioCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)) -> Any:
+    check_facility_access(current_user, scenario_in.facility_id)
     from models.period import Period
     from models.facility import Facility
     
@@ -66,7 +69,12 @@ def run_scenario_endpoint(scenario_in: ScenarioCreate, db: Session = Depends(get
 
 
 @router.get("/", response_model=list[ScenarioResponse])
-def list_scenarios(facility_id: uuid.UUID | None = None, db: Session = Depends(get_db)) -> Any:
+def list_scenarios(facility_id: uuid.UUID | None = None, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)) -> Any:
+    if facility_id:
+        check_facility_access(current_user, facility_id)
+    elif current_user.role.name != "admin":
+        facility_id = current_user.facility_id
+
     stmt = select(Scenario)
     if facility_id:
         stmt = stmt.where(Scenario.facility_id == facility_id)

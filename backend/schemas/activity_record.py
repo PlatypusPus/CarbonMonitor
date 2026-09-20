@@ -26,6 +26,19 @@ class ActivityRecordCreate(BaseModel):
             self.confirmed_by_user = False
         return self
 
+    @model_validator(mode="after")
+    def validate_units(self) -> "ActivityRecordCreate":
+        valid_units = {
+            "electricity": "kWh",
+            "diesel": "litre",
+            "petrol": "litre",
+            "lpg": "kg"
+        }
+        expected = valid_units.get(self.activity_type)
+        if expected and self.unit != expected:
+            raise ValueError(f"Invalid unit for {self.activity_type}. Expected {expected}, got {self.unit}")
+        return self
+
 
 class ActivityRecordResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)

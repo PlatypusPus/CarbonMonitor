@@ -32,7 +32,7 @@ def run_scenario(
         
     stmt = select(EmissionFactor).where(
         EmissionFactor.activity_type == act_type,
-        EmissionFactor.region_code == region_code,
+        or_(EmissionFactor.region == region_code, EmissionFactor.region.is_(None)),
         or_(EmissionFactor.valid_from <= period_end, EmissionFactor.valid_from.is_(None)),
         or_(EmissionFactor.valid_to >= period_end, EmissionFactor.valid_to.is_(None))
     ).limit(1)
