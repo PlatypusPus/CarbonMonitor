@@ -30,10 +30,12 @@ def calculate_record(
     
     from models.facility import Facility
     facility = db.get(Facility, record.facility_id)
+    if not facility:
+        raise HTTPException(status_code=404, detail="Facility not found")
 
     stmt = select(EmissionFactor).where(
         EmissionFactor.activity_type == record.activity_type,
-        EmissionFactor.region_code == facility.region_code,
+        or_(EmissionFactor.region == facility.region_code, EmissionFactor.region.is_(None)),
         or_(EmissionFactor.valid_from <= record.period_end, EmissionFactor.valid_from.is_(None)),
         or_(EmissionFactor.valid_to >= record.period_end, EmissionFactor.valid_to.is_(None))
     ).limit(1)

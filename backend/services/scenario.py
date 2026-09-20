@@ -13,7 +13,7 @@ def run_scenario(
     db: Session, 
     baseline_activity: dict[str, Any], 
     modified_inputs: dict[str, Any], 
-    region_code: str, 
+    region_code: str | None, 
     period_end: datetime
 ) -> dict[str, Any]:
     allowed_keys = {"quantity", "activity_type", "unit"}
