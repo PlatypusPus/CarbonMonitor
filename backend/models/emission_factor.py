@@ -10,7 +10,7 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 from database import Base
 
-# TODO: keep in sync with ActivityRecord.ACTIVITY_TYPES
+# Kept in sync with ActivityRecord.ACTIVITY_TYPES
 ACTIVITY_TYPES = ("electricity", "diesel", "petrol", "lpg")
 
 
@@ -24,9 +24,9 @@ class EmissionFactor(Base):
     # NULL region means factor applies globally (e.g. combustion fuels are region-independent)
     region: Mapped[str | None] = mapped_column(String(50))
     factor_value: Mapped[float] = mapped_column(Float, nullable=False)
-    # TODO: populate factor_value from authoritative source (e.g. DEFRA, EPA) — do not guess values
+    # Factor value MUST be sourced from an authoritative database (e.g., DEFRA, EPA).
+    # Canonical units: "kg CO2e / kWh" for electricity, "kg CO2e / litre" for diesel/petrol, "kg CO2e / kg" for lpg
     unit: Mapped[str] = mapped_column(String(100), nullable=False)
-    # TODO: define unit convention, e.g. "kg CO2e / kWh"
     valid_from: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     valid_to: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(
