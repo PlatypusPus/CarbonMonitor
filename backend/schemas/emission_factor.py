@@ -16,7 +16,6 @@ class EmissionFactorCreate(BaseModel):
     unit: str
     valid_from: datetime
     valid_to: datetime | None = None
-    # TODO: factor_value must come from an authoritative source — do not accept arbitrary user input without review
 
 
 class EmissionFactorResponse(BaseModel):

@@ -4,7 +4,7 @@ import uuid
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, model_validator
 
 ActivityType = Literal["electricity", "diesel", "petrol", "lpg"]
 ActivitySource = Literal["manual", "csv", "ocr"]
@@ -19,7 +19,12 @@ class ActivityRecordCreate(BaseModel):
     unit: str
     source: ActivitySource
     confirmed_by_user: bool = False
-    # TODO: OCR-sourced records should default confirmed_by_user=False and require a separate confirm endpoint
+
+    @model_validator(mode="after")
+    def check_ocr_confirmed(self) -> "ActivityRecordCreate":
+        if self.source == "ocr" and self.confirmed_by_user:
+            self.confirmed_by_user = False
+        return self
 
 
 class ActivityRecordResponse(BaseModel):

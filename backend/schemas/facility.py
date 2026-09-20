@@ -3,15 +3,18 @@
 import uuid
 from datetime import datetime
 
+from typing import Literal
+
 from pydantic import BaseModel, ConfigDict
+
+FacilityType = Literal["office", "warehouse", "data_center", "manufacturing"]
 
 
 class FacilityCreate(BaseModel):
     name: str
     location: str | None = None
     region_code: str | None = None
-    facility_type: str | None = None
-    # TODO: validate facility_type against allowed enum values once defined
+    facility_type: FacilityType | None = None
 
 
 class FacilityResponse(BaseModel):
