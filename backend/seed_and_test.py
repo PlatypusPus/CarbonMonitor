@@ -1,6 +1,4 @@
-import uuid
 import datetime
-import json
 from sqlalchemy import select
 from database import SessionLocal
 from models.facility import Facility
