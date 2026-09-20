@@ -4,7 +4,7 @@ import uuid
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import select
+from sqlalchemy import select, or_
 from sqlalchemy.orm import Session
 
 from database import get_db
@@ -23,7 +23,15 @@ def calculate_record(activity_record_id: uuid.UUID, db: Session = Depends(get_db
     if not record:
         raise HTTPException(status_code=404, detail="ActivityRecord not found")
     
-    stmt = select(EmissionFactor).where(EmissionFactor.activity_type == record.activity_type).limit(1)
+    from models.facility import Facility
+    facility = db.get(Facility, record.facility_id)
+
+    stmt = select(EmissionFactor).where(
+        EmissionFactor.activity_type == record.activity_type,
+        EmissionFactor.region_code == facility.region_code,
+        or_(EmissionFactor.valid_from <= record.period_end, EmissionFactor.valid_from.is_(None)),
+        or_(EmissionFactor.valid_to >= record.period_end, EmissionFactor.valid_to.is_(None))
+    ).limit(1)
     factor = db.execute(stmt).scalar_one_or_none()
     if not factor:
         raise HTTPException(

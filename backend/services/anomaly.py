@@ -106,20 +106,26 @@ def run_detection(db: Session) -> int:
     count = 0
     for anomaly_data in anomalies:
         if anomaly_data.get("is_anomaly"):
-            db_anomaly = Anomaly(
-                timestamp=anomaly_data["timestamp"],
-                metric=anomaly_data["metric"],
-                facility_name=anomaly_data["facility_name"],
-                value=anomaly_data["value"],
-                unit=anomaly_data["unit"],
-                expected_value=anomaly_data["expected_value"],
-                anomaly_score=anomaly_data["anomaly_score"],
-                source=anomaly_data["source"],
-                region=anomaly_data["region"],
-                calculated_emission_id=anomaly_data["calculated_emission_id"]
-            )
-            db.add(db_anomaly)
-            count += 1
+            existing = db.execute(
+                select(Anomaly).where(
+                    Anomaly.calculated_emission_id == anomaly_data["calculated_emission_id"]
+                )
+            ).scalar_one_or_none()
+            if not existing:
+                db_anomaly = Anomaly(
+                    timestamp=anomaly_data["timestamp"],
+                    metric=anomaly_data["metric"],
+                    facility_name=anomaly_data["facility_name"],
+                    value=anomaly_data["value"],
+                    unit=anomaly_data["unit"],
+                    expected_value=anomaly_data["expected_value"],
+                    anomaly_score=anomaly_data["anomaly_score"],
+                    source=anomaly_data["source"],
+                    region=anomaly_data["region"],
+                    calculated_emission_id=anomaly_data["calculated_emission_id"]
+                )
+                db.add(db_anomaly)
+                count += 1
             
     db.commit()
     return count

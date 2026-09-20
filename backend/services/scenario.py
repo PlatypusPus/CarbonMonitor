@@ -3,12 +3,19 @@
 
 from typing import Any
 from sqlalchemy.orm import Session
-from sqlalchemy import select
+from sqlalchemy import select, or_
+from datetime import datetime
 from models.emission_factor import EmissionFactor
 from services.calculation import SCOPE_MAP
 
 
-def run_scenario(db: Session, baseline_activity: dict[str, Any], modified_inputs: dict[str, Any]) -> dict[str, Any]:
+def run_scenario(
+    db: Session, 
+    baseline_activity: dict[str, Any], 
+    modified_inputs: dict[str, Any], 
+    region_code: str, 
+    period_end: datetime
+) -> dict[str, Any]:
     allowed_keys = {"quantity", "activity_type", "unit"}
     for k in modified_inputs:
         if k not in allowed_keys:
@@ -23,7 +30,12 @@ def run_scenario(db: Session, baseline_activity: dict[str, Any], modified_inputs
     if not act_type:
         raise ValueError("activity_type is missing")
         
-    stmt = select(EmissionFactor).where(EmissionFactor.activity_type == act_type).limit(1)
+    stmt = select(EmissionFactor).where(
+        EmissionFactor.activity_type == act_type,
+        EmissionFactor.region_code == region_code,
+        or_(EmissionFactor.valid_from <= period_end, EmissionFactor.valid_from.is_(None)),
+        or_(EmissionFactor.valid_to >= period_end, EmissionFactor.valid_to.is_(None))
+    ).limit(1)
     factor = db.execute(stmt).scalar_one_or_none()
     if not factor:
         raise ValueError(f"No emission factor found for activity type: {act_type}")

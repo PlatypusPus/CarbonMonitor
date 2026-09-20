@@ -19,8 +19,21 @@ router = APIRouter()
 
 @router.post("/run", response_model=ScenarioResponse, status_code=status.HTTP_201_CREATED)
 def run_scenario_endpoint(scenario_in: ScenarioCreate, db: Session = Depends(get_db)) -> Any:
+    from models.period import Period
+    from models.facility import Facility
+    
+    facility = db.get(Facility, scenario_in.facility_id)
+    if not facility:
+        raise HTTPException(status_code=404, detail="Facility not found")
+        
+    period = db.get(Period, scenario_in.baseline_period_id)
+    if not period:
+        raise HTTPException(status_code=404, detail="Period not found")
+
     stmt = select(ActivityRecord).where(
         ActivityRecord.facility_id == scenario_in.facility_id,
+        ActivityRecord.period_start == period.start_date,
+        ActivityRecord.period_end == period.end_date
     ).limit(1)
     record = db.execute(stmt).scalar_one_or_none()
     
@@ -36,7 +49,7 @@ def run_scenario_endpoint(scenario_in: ScenarioCreate, db: Session = Depends(get
     modified_dict = scenario_in.modified_inputs.model_dump(exclude_unset=True)
     
     try:
-        result = run_scenario(db, baseline_activity, modified_dict)
+        result = run_scenario(db, baseline_activity, modified_dict, facility.region_code, period.end_date)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
         
