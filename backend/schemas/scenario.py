@@ -8,11 +8,18 @@ from typing import Any
 from pydantic import BaseModel, ConfigDict, field_validator
 
 
+class ScenarioInputsOverride(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    quantity: float | None = None
+    activity_type: str | None = None
+    unit: str | None = None
+
+
 class ScenarioCreate(BaseModel):
     facility_id: uuid.UUID
     baseline_period_id: uuid.UUID
-    modified_inputs: dict[str, Any]
-    # TODO: define the shape of modified_inputs — which ActivityRecord fields can be overridden
+    modified_inputs: ScenarioInputsOverride
 
 
 class ScenarioResponse(BaseModel):

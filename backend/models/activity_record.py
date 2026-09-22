@@ -5,7 +5,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, Enum, String, Uuid, func
+from sqlalchemy import Boolean, DateTime, Enum, ForeignKey, String, Uuid, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from database import Base
@@ -19,16 +19,15 @@ class ActivityRecord(Base):
     __tablename__ = "activity_records"
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
-    facility_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
-    # TODO: add FK constraint to facilities.id once migration is ready
+    facility_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("facilities.id"), nullable=False)
     period_start: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     period_end: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     activity_type: Mapped[str] = mapped_column(
         Enum(*ACTIVITY_TYPES, name="activity_type_enum"), nullable=False
     )
     quantity: Mapped[float] = mapped_column(nullable=False)
+    # Canonical units: "kWh" for electricity, "litres" for diesel/petrol, "kg" for lpg
     unit: Mapped[str] = mapped_column(String(50), nullable=False)
-    # TODO: define canonical unit strings per activity_type (e.g. "kWh", "litres")
     source: Mapped[str] = mapped_column(
         Enum(*SOURCES, name="activity_source_enum"), nullable=False
     )
