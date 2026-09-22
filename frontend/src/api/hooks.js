@@ -22,12 +22,39 @@ export const useAnomalies = (params) =>
 export const useCrossVerify = (params) =>
   useQuery({ queryKey: ["crossverify", params], queryFn: get("/emissions/crossverify", params) });
 
+export const useFacilities = () =>
+  useQuery({ queryKey: ["facilities"], queryFn: get("/facilities") });
+
+export const useActivityDrafts = () =>
+  useQuery({ queryKey: ["activity-drafts"], queryFn: get("/activity") });
+
+export const useCreateFacility = () =>
+  useMutation({
+    mutationFn: async (payload) => {
+      const { data } = await client.post("/facilities", payload);
+      return data;
+    },
+  });
+
 export const useCreateOCRDraft = () =>
   useMutation({
     mutationFn: async (file) => {
       const formData = new FormData();
       formData.append("file", file);
       const { data } = await client.post("/activity/ocr", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      return data;
+    },
+  });
+
+export const useCreateExcelDraft = () =>
+  useMutation({
+    mutationFn: async ({ file, facilityId }) => {
+      const formData = new FormData();
+      formData.append("file", file);
+      if (facilityId) formData.append("facility_id", facilityId);
+      const { data } = await client.post("/activity/excel", formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
       return data;
