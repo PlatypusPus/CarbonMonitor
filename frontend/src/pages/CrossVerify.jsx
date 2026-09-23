@@ -27,10 +27,13 @@ export default function CrossVerify() {
   const summary = useSummary();
   const metrics = summary.data ?? [];
 
-  const [metric, setMetric] = useState("co2_kg_per_hour");
+  const [metric, setMetric] = useState("electricity");
   const [interval, setInterval] = useState("1d");
 
-  const { data, isLoading } = useCrossVerify({ metric, interval });
+  const activeMetric = metrics.find((m) => m.metric === metric)?.metric ?? metrics[0]?.metric ?? metric;
+  const effectiveMetric = activeMetric !== metric ? activeMetric : metric;
+
+  const { data, isLoading } = useCrossVerify({ metric: effectiveMetric, interval });
   const rows = data ?? [];
   const points = rows.map((r) => ({
     t: date(r.timestamp),
@@ -49,7 +52,7 @@ export default function CrossVerify() {
 
       <div className="flex flex-wrap items-center gap-3">
         <select
-          value={metric}
+          value={effectiveMetric}
           onChange={(e) => setMetric(e.target.value)}
           className="rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink outline-none focus:border-leaf"
         >

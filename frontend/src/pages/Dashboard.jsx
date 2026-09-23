@@ -33,7 +33,7 @@ function ChartCard({ series }) {
     <div className="rounded-card border border-line bg-surface p-5">
       <div className="mb-3 flex items-center justify-between">
         <span className="text-sm font-semibold text-ink">CO₂ trend</span>
-        <span className="font-mono text-xs text-muted">kg/h</span>
+        <span className="font-mono text-xs text-muted">kg CO₂e</span>
       </div>
       {series.isLoading ? (
         <div className="h-56 animate-pulse rounded-lg bg-canvas" />
@@ -91,7 +91,9 @@ function SensorFeed({ feed }) {
 export default function Dashboard() {
   const summary = useSummary();
   const anomalies = useAnomalies({ limit: 200 });
-  const series = useTimeseries({ metric: "co2_kg_per_hour", interval: "1h" });
+  // metric matches ActivityRecord.activity_type (electricity/diesel/...)
+  const defaultMetric = summary.data?.[0]?.metric ?? "electricity";
+  const series = useTimeseries({ metric: defaultMetric, interval: "1h" });
   const feed = useLatest({ limit: 12 });
 
   const metrics = (summary.data ?? []).slice(0, 3);
