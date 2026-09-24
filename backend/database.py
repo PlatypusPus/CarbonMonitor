@@ -103,7 +103,7 @@ def _seed_defaults() -> None:
             ("electricity", 0.82, "kg CO2e / kWh"),
             ("diesel", 2.68, "kg CO2e / litre"),
             ("petrol", 2.31, "kg CO2e / litre"),
-            ("lpg", 1.51, "kg CO2e / litre"),
+            ("lpg", 1.51, "kg CO2e / kg"),
         ]
         for activity_type, factor_value, unit in defaults:
             if not db.query(EmissionFactor).filter(

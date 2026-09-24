@@ -34,6 +34,8 @@ dependencies = [
     "reportlab>=4.2",
     # --- XLSX parsing (upload pipeline) ---
     "openpyxl>=3.1",
+    "alembic>=1.20.0",
+    "mypy>=2.3.1",
 ]
 
 [dependency-groups]

@@ -13,6 +13,8 @@ import logging
 from collections import defaultdict
 from typing import Any
 
+from sqlalchemy.orm import Session
+
 import numpy as np
 from sklearn.ensemble import IsolationForest
 
@@ -64,18 +66,99 @@ def detect(
     return anomalies
 
 
-def run_detection() -> int:
-    # TODO: fetch calculated_emissions from Postgres for the trailing TRAIN_WINDOW_DAYS,
-    # call detect(), persist flagged rows to a Postgres anomaly table (model not yet defined).
-    # Return count of anomalies written.
-    logger.warning("run_detection: not yet implemented — Postgres anomaly table pending")
-    return 0
+def run_detection(db: Session) -> int:
+    from datetime import datetime, timedelta, timezone
+    from sqlalchemy import select
+    from models.calculated_emission import CalculatedEmission
+    from models.activity_record import ActivityRecord
+    from models.facility import Facility
+    from models.anomaly import Anomaly
+
+    cutoff = datetime.now(timezone.utc) - timedelta(days=TRAIN_WINDOW_DAYS)
+    
+    stmt = (
+        select(CalculatedEmission, ActivityRecord, Facility)
+        .join(ActivityRecord, CalculatedEmission.activity_record_id == ActivityRecord.id)
+        .join(Facility, ActivityRecord.facility_id == Facility.id)
+        .where(CalculatedEmission.calculated_at >= cutoff)
+    )
+    
+    results = db.execute(stmt).all()
+    
+    if not results:
+        return 0
+        
+    readings = []
+    for calc, record, fac in results:
+        readings.append({
+            "metric": record.activity_type,
+            "facility_name": fac.name,
+            "value": float(calc.co2e_kg),
+            "unit": "kg CO2e",
+            "source": record.source,
+            "region": fac.region_code,
+            "calculated_emission_id": calc.id,
+            "timestamp": record.period_end
+        })
+        
+    anomalies = detect(readings)
+    
+    count = 0
+    for anomaly_data in anomalies:
+        if anomaly_data.get("is_anomaly"):
+            existing = db.execute(
+                select(Anomaly).where(
+                    Anomaly.calculated_emission_id == anomaly_data["calculated_emission_id"]
+                )
+            ).scalars().first()
+            if not existing:
+                db_anomaly = Anomaly(
+                    timestamp=anomaly_data["timestamp"],
+                    metric=anomaly_data["metric"],
+                    facility_name=anomaly_data["facility_name"],
+                    value=anomaly_data["value"],
+                    unit=anomaly_data["unit"],
+                    expected_value=anomaly_data["expected_value"],
+                    anomaly_score=anomaly_data["anomaly_score"],
+                    source=anomaly_data["source"],
+                    region=anomaly_data["region"],
+                    calculated_emission_id=anomaly_data["calculated_emission_id"]
+                )
+                db.add(db_anomaly)
+                count += 1
+            
+    db.commit()
+    return count
 
 
 def query_anomalies(
+    db: Session,
     metric: str | None = None,
     facility: str | None = None,
     limit: int = 50,
 ) -> list[dict[str, Any]]:
-    # TODO: query Postgres anomaly table once run_detection() is implemented.
-    return []
+    from sqlalchemy import select
+    from models.anomaly import Anomaly
+    
+    stmt = select(Anomaly).order_by(Anomaly.timestamp.desc()).limit(limit)
+    if metric:
+        stmt = stmt.where(Anomaly.metric == metric)
+    if facility:
+        stmt = stmt.where(Anomaly.facility_name == facility)
+        
+    db_anomalies = db.execute(stmt).scalars().all()
+    
+    return [
+        {
+            "timestamp": a.timestamp,
+            "metric": a.metric,
+            "facility_name": a.facility_name,
+            "value": a.value,
+            "unit": a.unit,
+            "expected_value": a.expected_value,
+            "anomaly_score": a.anomaly_score,
+            "source": a.source,
+            "region": a.region
+        }
+        for a in db_anomalies
+    ]

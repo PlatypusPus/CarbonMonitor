@@ -53,3 +53,10 @@ def require_role(*allowed_roles: str) -> Callable[[User], User]:
         return user
 
     return checker
+
+def check_facility_access(user: User, facility_id: uuid.UUID) -> None:
+    if user.role.name != "admin" and user.facility_id != facility_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to access this facility",
+        )

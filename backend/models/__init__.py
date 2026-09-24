@@ -1,4 +1,6 @@
 from models.activity_record import ActivityRecord
+from models.anomaly import Anomaly
+from models.period import Period
 from models.calculated_emission import CalculatedEmission
 from models.emission_factor import EmissionFactor
 from models.facility import Facility
@@ -12,6 +14,8 @@ from models.user import User
 
 __all__ = [
     "ActivityRecord",
+    "Anomaly",
+    "Period",
     "CalculatedEmission",
     "EmissionFactor",
     "Facility",
