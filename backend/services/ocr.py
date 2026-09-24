@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
+import csv
 import re
-from datetime import datetime
-from io import BytesIO
+from datetime import date, datetime
+from io import BytesIO, StringIO
 from typing import Iterable
 
 UUID_PATTERN = re.compile(
@@ -13,6 +14,17 @@ UUID_PATTERN = re.compile(
 )
 FLOAT_PATTERN = re.compile(r"[-+]?\d[\d,]*(?:\.\d+)?")
 ACTIVITY_TYPES = ("electricity", "diesel", "petrol", "lpg")
+
+HEADER_ALIASES: dict[str, tuple[str, ...]] = {
+    "facility_id": ("facility id", "facility_id", "site id", "site_id", "facility"),
+    "period_start": ("period start", "start date", "period_start", "start", "from"),
+    "period_end": ("period end", "end date", "period_end", "end", "to"),
+    "activity_type": ("activity type", "activity_type", "fuel type", "fuel", "metric", "activity"),
+    "quantity": ("quantity", "amount", "usage", "value"),
+    "unit": ("unit", "measurement", "uom"),
+}
+KNOWN_HEADERS = frozenset().union(*HEADER_ALIASES.values())
+BINARY_EXTENSIONS = (".pdf", ".png", ".jpg", ".jpeg", ".webp", ".xlsx", ".xlsm", ".zip")
 
 
 def _extract_pdf_text(file: bytes) -> str:
@@ -107,7 +119,153 @@ def _parse_quantity(value: str) -> str:
     return match.group(0).replace(",", "")
 
 
-def extract_activity_from_document(file: bytes) -> dict[str, str]:
+def _pick_header(row: dict[str, str], aliases: tuple[str, ...]) -> str | None:
+    for alias in aliases:
+        value = row.get(alias)
+        if value not in (None, ""):
+            return value
+    return None
+
+
+def _extract_tabular(row: dict[str, str]) -> dict[str, str]:
+    facility_id = _pick_header(row, HEADER_ALIASES["facility_id"])
+    if facility_id is None:
+        raise ValueError("missing facility_id")
+
+    period_start_raw = _pick_header(row, HEADER_ALIASES["period_start"])
+    period_end_raw = _pick_header(row, HEADER_ALIASES["period_end"])
+    if period_start_raw is None or period_end_raw is None:
+        raise ValueError("missing period_start or period_end")
+
+    activity_type = _pick_header(row, HEADER_ALIASES["activity_type"])
+    if activity_type is None:
+        raise ValueError("missing activity_type")
+    activity_type = activity_type.strip().lower()
+    if activity_type not in ACTIVITY_TYPES:
+        raise ValueError(f"unsupported activity_type '{activity_type}'")
+
+    quantity_raw = _pick_header(row, HEADER_ALIASES["quantity"])
+    if quantity_raw is None:
+        raise ValueError("missing quantity")
+    quantity = _parse_quantity(quantity_raw)
+
+    unit = _pick_header(row, HEADER_ALIASES["unit"])
+    if unit is None:
+        raise ValueError("missing unit")
+    unit = unit.splitlines()[0].strip()
+
+    return {
+        "facility_id": facility_id,
+        "period_start": _parse_datetime(period_start_raw),
+        "period_end": _parse_datetime(period_end_raw),
+        "activity_type": activity_type,
+        "quantity": quantity,
+        "unit": unit,
+    }
+
+
+def _build_records(rows: list[dict[str, str]]) -> list[dict[str, str]]:
+    records: list[dict[str, str]] = []
+    for index, row in enumerate(rows, start=2):
+        try:
+            records.append(_extract_tabular(row))
+        except ValueError as exc:
+            raise ValueError(f"row {index}: {exc}") from exc
+    return records
+
+
+def _parse_csv_rows(text: str) -> list[dict[str, str]] | None:
+    reader = csv.DictReader(StringIO(text))
+    headers = {
+        str(header).strip().lower()
+        for header in (reader.fieldnames or [])
+        if header is not None
+    }
+    if not headers or not headers & KNOWN_HEADERS:
+        return None
+
+    rows: list[dict[str, str]] = []
+    for raw in reader:
+        row = {
+            str(key).strip().lower(): (value or "").strip()
+            for key, value in raw.items()
+        }
+        if any(row.values()):
+            rows.append(row)
+    return rows or None
+
+
+def _parse_excel_rows(file: bytes) -> list[dict[str, str]] | None:
+    try:
+        from openpyxl import load_workbook
+    except ImportError as exc:
+        raise ValueError("Excel support is unavailable: install openpyxl") from exc
+
+    try:
+        workbook = load_workbook(BytesIO(file), read_only=True, data_only=True)
+        sheet = workbook.active
+        raw_rows = [list(row) for row in sheet.iter_rows(values_only=True)]
+        workbook.close()
+    except Exception as exc:
+        raise ValueError("Failed to read Excel workbook") from exc
+
+    if not raw_rows:
+        return None
+
+    headers = [
+        str(cell).strip().lower() if cell is not None else ""
+        for cell in raw_rows[0]
+    ]
+    if not set(headers) & KNOWN_HEADERS:
+        return None
+
+    rows: list[dict[str, str]] = []
+    for raw in raw_rows[1:]:
+        row: dict[str, str] = {}
+        for header, cell in zip(headers, raw):
+            if cell is None or not header:
+                continue
+            if isinstance(cell, datetime):
+                row[header] = cell.isoformat(sep="T")
+            elif isinstance(cell, date):
+                row[header] = cell.isoformat()
+            else:
+                row[header] = str(cell).strip()
+        if any(row.values()):
+            rows.append(row)
+    return rows or None
+
+
+def extract_activities_from_document(
+    file: bytes,
+    filename: str | None = None,
+) -> list[dict[str, str]]:
+    """Extract one activity record per data row from an uploaded document.
+
+    Supports tabular files (CSV/Excel — one record per data row) as well as the
+    labelled-text bills parsed by :func:`extract_activity_from_document`.
+    """
+    lower_name = (filename or "").lower()
+
+    if lower_name.endswith((".xlsx", ".xlsm")) or file.startswith(b"PK\x03\x04"):
+        rows = _parse_excel_rows(file)
+        if rows is not None:
+            return _build_records(rows)
+
+    if lower_name.endswith(".csv"):
+        rows = _parse_csv_rows(file.decode("utf-8", errors="ignore"))
+        if rows is not None:
+            return _build_records(rows)
+
+    if not (file.startswith(b"%PDF") or lower_name.endswith(BINARY_EXTENSIONS)):
+        rows = _parse_csv_rows(file.decode("utf-8", errors="ignore"))
+        if rows is not None:
+            return _build_records(rows)
+
+    return [_extract_single_from_document(file)]
+
+
+def _extract_single_from_document(file: bytes) -> dict[str, str]:
     text = _extract_text(file)
     normalised = "\n".join(line.strip() for line in text.splitlines() if line.strip())
 
@@ -153,3 +311,8 @@ def extract_activity_from_document(file: bytes) -> dict[str, str]:
         "quantity": quantity,
         "unit": unit,
     }
+
+
+def extract_activity_from_document(file: bytes) -> dict[str, str]:
+    """Extract a single activity record (first record) from a document."""
+    return extract_activities_from_document(file)[0]

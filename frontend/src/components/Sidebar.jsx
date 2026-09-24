@@ -15,7 +15,7 @@ const links = [
   { to: "/anomalies", label: "Anomaly Log", icon: AlertTriangle },
   { to: "/cross-verify", label: "Cross-Verification", icon: FileCheck },
   { to: "/esg-report", label: "ESG Report", icon: FileText },
-  { to: "/upload", label: "Upload Data", icon: Upload },
+  { to: "/upload", label: "Upload Data", icon: UploadCloud },
 ];
 
 export default function Sidebar() {
