@@ -32,9 +32,17 @@ elk/logstash/data/
 *.log
 logs/
 
+# --- Uploads / sample data (never commit real bills) ---
+*.xlsx
+*.xls
+# Exception: the electricity-workbook test fixture must be shared with the team.
+!backend/tests/fixtures/*.xlsx
+
 # --- OS / editor ---
 .DS_Store
 Thumbs.db
 .idea/
 .vscode/
 *.swp
+
+electricity.xlsx

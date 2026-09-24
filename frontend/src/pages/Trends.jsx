@@ -19,12 +19,15 @@ export default function Trends() {
   const summary = useSummary();
   const metrics = summary.data ?? [];
 
-  const [metric, setMetric] = useState("co2_kg_per_hour");
+  const [metric, setMetric] = useState("electricity");
   const [interval, setInterval] = useState("1h");
 
-  const series = useTimeseries({ metric, interval });
+  // sync default when summary loads and current metric not in list
+  const activeMetric = metrics.find((m) => m.metric === metric)?.metric ?? metrics[0]?.metric ?? metric;
+  const effectiveMetric = activeMetric !== metric ? activeMetric : metric;
+  const series = useTimeseries({ metric: effectiveMetric, interval });
   const points = (series.data ?? []).map((p) => ({ t: time(p.timestamp), value: p.value }));
-  const unitLabel = metrics.find((m) => m.metric === metric)?.unit ?? "";
+  const unitLabel = metrics.find((m) => m.metric === effectiveMetric)?.unit ?? "";
 
   return (
     <div className="flex flex-col gap-5">
@@ -35,7 +38,7 @@ export default function Trends() {
 
       <div className="flex flex-wrap items-center gap-3">
         <select
-          value={metric}
+          value={effectiveMetric}
           onChange={(e) => setMetric(e.target.value)}
           className="rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink outline-none focus:border-leaf"
         >
@@ -63,8 +66,8 @@ export default function Trends() {
 
       <div className="rounded-card border border-line bg-surface p-5">
         <div className="mb-3 flex items-center justify-between">
-          <span className="text-sm font-semibold text-ink">{metric}</span>
-          <span className="font-mono text-xs text-muted">{unitLabel}</span>
+          <span className="text-sm font-semibold text-ink">{effectiveMetric}</span>
+          <span className="font-mono text-xs text-muted">{unitLabel || "kg CO₂e"}</span>
         </div>
         {series.isLoading ? (
           <div className="h-64 animate-pulse rounded-lg bg-canvas" />
