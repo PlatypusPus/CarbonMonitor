@@ -1,6 +1,6 @@
 """Tests for the Excel electricity ingestion + normalization layer.
 
-Uses the real ``electricity.xlsx`` fixture at the repository root plus synthetic
+Uses the real ``tests/fixtures/electricity.xlsx`` plus synthetic
 workbooks for edge cases. Existing OCR behavior is covered by ``test_ocr.py``;
 here we also assert the Excel layer does not change how OCR treats the same
 workbook bytes.
@@ -24,8 +24,8 @@ from services.excel.normalizer import (
 from services.excel.parser import ParsedExcelRow, ParsedWorkbook, parse_workbook
 from services.ocr import extract_activities_from_document
 
-REPO_ROOT = Path(__file__).resolve().parents[2]
-ELECTRICITY_XLSX = REPO_ROOT / "electricity.xlsx"
+_TEST_DIR = Path(__file__).resolve().parent
+ELECTRICITY_XLSX = _TEST_DIR / "fixtures" / "electricity.xlsx"
 
 FIXTURE_FACILITY = UUID("11111111-1111-4111-8111-111111111111")
 

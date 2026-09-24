@@ -1,7 +1,7 @@
 """End-to-end test of the complete Excel ingestion flow against the real API.
 
 This test exercises the actual FastAPI endpoints against a real PostgreSQL
-database (``carbontrace_e2e``) using the repo-root ``electricity.xlsx`` as the
+database (``carbontrace_e2e``) using ``tests/fixtures/electricity.xlsx`` as the
 uploaded file. It covers the full lifecycle:
 
     Excel file -> POST /api/activity/excel -> normalized records -> drafts
@@ -28,8 +28,8 @@ import pytest
 
 TEST_DATABASE_URL = "postgresql+psycopg://carbontrace:carbontrace@localhost:5432/carbontrace_e2e"
 
-REPO_ROOT = Path(__file__).resolve().parents[2]
-ELECTRICITY_XLSX = REPO_ROOT / "electricity.xlsx"
+_TEST_DIR = Path(__file__).resolve().parent
+ELECTRICITY_XLSX = _TEST_DIR / "fixtures" / "electricity.xlsx"
 
 ADMIN_EMAIL = "admin@example.com"
 ADMIN_PASSWORD = "e2e-pass"
