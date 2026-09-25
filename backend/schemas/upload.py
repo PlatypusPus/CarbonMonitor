@@ -14,3 +14,10 @@ class UploadResponse(BaseModel):
     status: str
     row_count: int | None = None
     created_at: datetime
+
+
+class UploadPreviewResponse(BaseModel):
+    filename: str
+    columns: list[str]
+    rows: list[list[str | None]]
+    row_count: int

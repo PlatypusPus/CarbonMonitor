@@ -24,7 +24,9 @@ def evaluate_rules(db: Session, facility_id: uuid.UUID, period_id: uuid.UUID) ->
         .where(
             ActivityRecord.facility_id == facility_id,
             ActivityRecord.period_start >= period.start_date,
-            ActivityRecord.period_end <= period.end_date
+            ActivityRecord.period_end <= period.end_date,
+            # Only reviewed activity may drive a recommendation.
+            ActivityRecord.confirmed_by_user.is_(True),
         )
     )
     current_emissions = db.execute(stmt).all()
@@ -53,7 +55,8 @@ def evaluate_rules(db: Session, facility_id: uuid.UUID, period_id: uuid.UUID) ->
             .where(
                 ActivityRecord.facility_id == facility_id,
                 ActivityRecord.period_start >= prev_period.start_date,
-                ActivityRecord.period_end <= prev_period.end_date
+                ActivityRecord.period_end <= prev_period.end_date,
+                ActivityRecord.confirmed_by_user.is_(True),
             )
         )
         prev_total = db.execute(prev_emissions_stmt).scalar() or 0.0

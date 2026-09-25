@@ -127,9 +127,11 @@ def _pick_header(row: dict[str, str], aliases: tuple[str, ...]) -> str | None:
     return None
 
 
-def _extract_tabular(row: dict[str, str]) -> dict[str, str]:
-    facility_id = _pick_header(row, HEADER_ALIASES["facility_id"])
-    if facility_id is None:
+def _extract_tabular(row: dict[str, str], facility_id: str | None = None) -> dict[str, str]:
+    found_facility_id = _pick_header(row, HEADER_ALIASES["facility_id"])
+    if found_facility_id is None:
+        found_facility_id = facility_id
+    if found_facility_id is None:
         raise ValueError("missing facility_id")
 
     period_start_raw = _pick_header(row, HEADER_ALIASES["period_start"])
@@ -155,7 +157,7 @@ def _extract_tabular(row: dict[str, str]) -> dict[str, str]:
     unit = unit.splitlines()[0].strip()
 
     return {
-        "facility_id": facility_id,
+        "facility_id": found_facility_id,
         "period_start": _parse_datetime(period_start_raw),
         "period_end": _parse_datetime(period_end_raw),
         "activity_type": activity_type,
@@ -164,11 +166,11 @@ def _extract_tabular(row: dict[str, str]) -> dict[str, str]:
     }
 
 
-def _build_records(rows: list[dict[str, str]]) -> list[dict[str, str]]:
+def _build_records(rows: list[dict[str, str]], facility_id: str | None = None) -> list[dict[str, str]]:
     records: list[dict[str, str]] = []
     for index, row in enumerate(rows, start=2):
         try:
-            records.append(_extract_tabular(row))
+            records.append(_extract_tabular(row, facility_id))
         except ValueError as exc:
             raise ValueError(f"row {index}: {exc}") from exc
     return records
@@ -239,41 +241,52 @@ def _parse_excel_rows(file: bytes) -> list[dict[str, str]] | None:
 def extract_activities_from_document(
     file: bytes,
     filename: str | None = None,
+    facility_id: str | None = None,
 ) -> list[dict[str, str]]:
     """Extract one activity record per data row from an uploaded document.
 
     Supports tabular files (CSV/Excel — one record per data row) as well as the
     labelled-text bills parsed by :func:`extract_activity_from_document`.
+
+    ``facility_id`` is the facility the caller selected in the UI: it is used
+    for rows/documents that don't name one, so a bill without a facility label
+    still stages instead of failing validation.
     """
     lower_name = (filename or "").lower()
 
     if lower_name.endswith((".xlsx", ".xlsm")) or file.startswith(b"PK\x03\x04"):
         rows = _parse_excel_rows(file)
         if rows is not None:
-            return _build_records(rows)
+            return _build_records(rows, facility_id)
 
     if lower_name.endswith(".csv"):
         rows = _parse_csv_rows(file.decode("utf-8", errors="ignore"))
         if rows is not None:
-            return _build_records(rows)
+            return _build_records(rows, facility_id)
 
     if not (file.startswith(b"%PDF") or lower_name.endswith(BINARY_EXTENSIONS)):
         rows = _parse_csv_rows(file.decode("utf-8", errors="ignore"))
         if rows is not None:
-            return _build_records(rows)
+            return _build_records(rows, facility_id)
 
-    return [_extract_single_from_document(file)]
+    return [_extract_single_from_document(file, facility_id)]
 
 
-def _extract_single_from_document(file: bytes) -> dict[str, str]:
+def _extract_single_from_document(
+    file: bytes, facility_id: str | None = None
+) -> dict[str, str]:
     text = _extract_text(file)
     normalised = "\n".join(line.strip() for line in text.splitlines() if line.strip())
 
-    facility_id = _find_labeled_value(normalised, ("facility id", "facility_id", "site id", "site_id"))
-    if facility_id is None:
+    found_facility_id = _find_labeled_value(
+        normalised, ("facility id", "facility_id", "site id", "site_id")
+    )
+    if found_facility_id is None:
         match = UUID_PATTERN.search(normalised)
-        facility_id = match.group(0) if match else None
-    if facility_id is None:
+        found_facility_id = match.group(0) if match else None
+    if found_facility_id is None:
+        found_facility_id = str(facility_id) if facility_id else None
+    if found_facility_id is None:
         raise ValueError("missing facility_id")
 
     period_start_raw = _find_labeled_value(normalised, ("period start", "start date", "from"))
@@ -304,7 +317,7 @@ def _extract_single_from_document(file: bytes) -> dict[str, str]:
     unit = unit.splitlines()[0].strip()
 
     return {
-        "facility_id": facility_id,
+        "facility_id": found_facility_id,
         "period_start": _parse_datetime(period_start_raw),
         "period_end": _parse_datetime(period_end_raw),
         "activity_type": activity_type,
