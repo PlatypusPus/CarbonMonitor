@@ -9,13 +9,12 @@ import {
 import { NavLink } from "react-router-dom";
 
 const links = [
-  { to: "/ocr", label: "OCR Intake", icon: UploadCloud },
+  { to: "/upload", label: "Data Intake", icon: UploadCloud },
   { to: "/", label: "Live Monitor", icon: Activity, end: true },
   { to: "/trends", label: "Trends & Analytics", icon: BarChart3 },
   { to: "/anomalies", label: "Anomaly Log", icon: AlertTriangle },
   { to: "/cross-verify", label: "Cross-Verification", icon: FileCheck },
   { to: "/esg-report", label: "ESG Report", icon: FileText },
-  { to: "/upload", label: "Upload Data", icon: UploadCloud },
 ];
 
 export default function Sidebar() {
