@@ -68,3 +68,10 @@ export const useConfirmOCRDraft = () =>
       return data;
     },
   });
+
+export const useRejectOCRDraft = () =>
+  useMutation({
+    mutationFn: async (draftId) => {
+      await client.delete(`/activity/ocr/${draftId}`);
+    },
+  });

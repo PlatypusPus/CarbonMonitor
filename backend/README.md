@@ -27,8 +27,8 @@ services/   calculation engine, OCR pipeline, anomaly detection,
 OCR drafts are created with `POST /api/activity/ocr` and confirmed with
 `POST /api/activity/ocr/{draft_id}/confirm`.
 
-The frontend exposes the same flow on the **OCR Intake** page, and PDFs are supported
-alongside image and text uploads.
+The frontend exposes the same flow on the **Data Intake** page (`/upload`), and PDFs are
+supported alongside image and text uploads.
 
 ## Lint
 
