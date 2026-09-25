@@ -139,6 +139,21 @@ def test_extract_activities_from_csv_uses_header_aliases() -> None:
     assert result[0]["quantity"] == "200"
 
 
+def test_extract_uses_the_selected_facility_when_the_document_has_none() -> None:
+    payload = (
+        b"facility_id,period_start,period_end,activity_type,quantity,unit\n"
+        b",2026-08-01,2026-08-31,diesel,50,litres\n"
+    )
+
+    result = extract_activities_from_document(
+        payload, "bills.csv", "33333333-3333-4333-8333-333333333333"
+    )
+
+    assert len(result) == 1
+    assert result[0]["facility_id"] == "33333333-3333-4333-8333-333333333333"
+    assert result[0]["activity_type"] == "diesel"
+
+
 def test_extract_activities_from_csv_reports_bad_rows() -> None:
     payload = (
         b"facility_id,period_start,period_end,activity_type,quantity,unit\n"
