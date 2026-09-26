@@ -7,7 +7,7 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, model_validator
 
 ActivityType = Literal["electricity", "diesel", "petrol", "lpg"]
-ActivitySource = Literal["manual", "csv", "ocr"]
+ActivitySource = Literal["manual", "csv", "ocr", "excel"]
 
 
 class ActivityRecordCreate(BaseModel):

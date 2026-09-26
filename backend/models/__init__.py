@@ -4,6 +4,7 @@ from models.period import Period
 from models.calculated_emission import CalculatedEmission
 from models.emission_factor import EmissionFactor
 from models.facility import Facility
+from models.ocr_draft import OCRDraft
 from models.recommendation import Recommendation
 from models.role import Role
 from models.scenario import Scenario
@@ -18,6 +19,7 @@ __all__ = [
     "CalculatedEmission",
     "EmissionFactor",
     "Facility",
+    "OCRDraft",
     "Recommendation",
     "Role",
     "Scenario",

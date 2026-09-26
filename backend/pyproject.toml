@@ -24,6 +24,9 @@ dependencies = [
     "python-multipart>=0.0.9",         # form/file uploads
     # --- HTTP client (OCR, external integrations) ---
     "httpx>=0.27",
+    "pypdf>=5.0",
+    "pymupdf>=1.24",
+    "pytesseract>=0.3.13",
     # --- ML anomaly detection ---
     "scikit-learn>=1.5",
     "numpy>=1.26",

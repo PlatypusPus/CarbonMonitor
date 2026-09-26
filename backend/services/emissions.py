@@ -1,4 +1,9 @@
-"""Emission data queries against Postgres."""
+"""Emission data queries against Postgres.
+
+Every aggregate here is restricted to reviewer-confirmed activity. Unconfirmed
+rows stay in the database (they are still pending review on the intake page) but
+must never move a dashboard or a report until a human approves them.
+"""
 
 from typing import Any
 
@@ -6,6 +11,8 @@ from sqlalchemy.orm import Session
 
 from models.activity_record import ActivityRecord
 from models.calculated_emission import CalculatedEmission
+
+CONFIRMED_ONLY = ActivityRecord.confirmed_by_user.is_(True)
 
 
 def query_latest(
@@ -20,7 +27,7 @@ def query_latest(
 
     q = db.query(CalculatedEmission, ActivityRecord, Facility).join(
         ActivityRecord, CalculatedEmission.activity_record_id == ActivityRecord.id
-    ).outerjoin(Facility, ActivityRecord.facility_id == Facility.id)
+    ).outerjoin(Facility, ActivityRecord.facility_id == Facility.id).filter(CONFIRMED_ONLY)
     if metric:
         q = q.filter(ActivityRecord.activity_type == metric)
     if source:
@@ -81,6 +88,7 @@ def query_timeseries(
         )
         .join(ActivityRecord, CalculatedEmission.activity_record_id == ActivityRecord.id)
         .filter(ActivityRecord.activity_type == metric)
+        .filter(CONFIRMED_ONLY)
         .group_by(text("bucket"))
         .order_by(text("bucket"))
     )
@@ -125,6 +133,7 @@ def query_crossverify(
         .join(ActivityRecord, CalculatedEmission.activity_record_id == ActivityRecord.id)
         .filter(ActivityRecord.activity_type == metric)
         .filter(ActivityRecord.source != "csv")
+        .filter(CONFIRMED_ONLY)
         .group_by(text("bucket"))
         .order_by(text("bucket"))
     )
@@ -157,6 +166,7 @@ def query_summary(db: Session) -> list[dict[str, Any]]:
             func.avg(CalculatedEmission.co2e_kg).label("avg_value"),
         )
         .join(ActivityRecord, CalculatedEmission.activity_record_id == ActivityRecord.id)
+        .filter(CONFIRMED_ONLY)
         .group_by(ActivityRecord.activity_type)
         .all()
     )
@@ -168,6 +178,7 @@ def query_summary(db: Session) -> list[dict[str, Any]]:
             CalculatedEmission.calculated_at.label("latest_timestamp"),
         )
         .join(ActivityRecord, CalculatedEmission.activity_record_id == ActivityRecord.id)
+        .filter(CONFIRMED_ONLY)
         .distinct(ActivityRecord.activity_type)
         .order_by(ActivityRecord.activity_type, CalculatedEmission.calculated_at.desc())
         .all()

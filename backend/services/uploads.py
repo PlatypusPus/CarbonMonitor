@@ -8,6 +8,9 @@ from uuid import UUID
 
 from sqlalchemy.orm import Session
 
+from models.ocr_draft import OCRDraft
+from services.drafts import SOURCE_TYPE_UPLOAD, build_draft, draft_exists
+
 REQUIRED_COLUMNS = {"timestamp", "metric", "value"}
 ALLOWED_METRICS = {"electricity", "diesel", "petrol", "lpg"}
 
@@ -84,58 +87,63 @@ def convert_xlsx_to_csv_bytes(content: bytes) -> bytes:
     return buf.getvalue().encode("utf-8")
 
 
-def index_upload_readings(db: Session, upload_id: str, facility_id: UUID | None, rows: list[dict[str, Any]]) -> int:
-    """Persist parsed rows as ActivityRecords + CalculatedEmissions."""
-    from models.activity_record import ActivityRecord
-    from models.emission_factor import EmissionFactor
-    from services.calculation import calculate_emissions
+def next_period_end(period_start: datetime) -> datetime:
+    """First instant of the month after ``period_start`` (monthly billing period)."""
+    if period_start.month == 12:
+        return period_start.replace(year=period_start.year + 1, month=1, day=1)
+    return period_start.replace(month=period_start.month + 1, day=1)
 
-    if facility_id is None:
-        raise ValueError("facility_id is required — user has no facility assigned")
 
-    def next_month_start(dt: datetime) -> datetime:
-        if dt.month == 12:
-            return dt.replace(year=dt.year + 1, month=1, day=1)
-        return dt.replace(month=dt.month + 1, day=1)
+def stage_upload_drafts(
+    db: Session,
+    *,
+    user_id: UUID,
+    facility_id: UUID,
+    filename: str,
+    rows: list[dict[str, Any]],
+) -> list[OCRDraft]:
+    """Stage parsed upload rows as reviewable drafts.
 
-    # cache factors per activity_type
-    factor_cache: dict[str, Any] = {}
-
-    def get_factor(activity_type: str):
-        if activity_type not in factor_cache:
-            f = (
-                db.query(EmissionFactor)
-                .filter(
-                    EmissionFactor.activity_type == activity_type,
-                    EmissionFactor.region.is_(None),
-                )
-                .first()
-            )
-            if f is None:
-                raise ValueError(f"no emission_factor for activity_type={activity_type}")
-            factor_cache[activity_type] = f
-        return factor_cache[activity_type]
-
-    count = 0
+    Nothing is written to ``activity_records``/``calculated_emissions`` here —
+    that only happens once a reviewer confirms the draft, so an unreviewed
+    upload can never reach a dashboard. Rows already staged or confirmed for
+    this facility and source are skipped, which makes re-uploading a file a
+    no-op instead of a double count.
+    """
+    staged: list[OCRDraft] = []
     for row in rows:
         period_start = datetime.fromisoformat(row["timestamp"])
+        period_end = next_period_end(period_start)
         metric = row["metric"]
-        factor = get_factor(metric)
-        ar = ActivityRecord(
+        quantity = row["value"]
+        unit = row.get("unit") or "kWh"
+        if draft_exists(
+            db,
             facility_id=facility_id,
             period_start=period_start,
-            period_end=next_month_start(period_start),
+            period_end=period_end,
             activity_type=metric,
-            quantity=row["value"],
-            unit=row.get("unit") or "kWh",
-            source="csv",
-            confirmed_by_user=False,
+            quantity=quantity,
+            unit=unit,
+            source_type=SOURCE_TYPE_UPLOAD,
+        ):
+            continue
+        staged.append(
+            build_draft(
+                user_id=user_id,
+                facility_id=facility_id,
+                source_filename=filename,
+                source_type=SOURCE_TYPE_UPLOAD,
+                period_start=period_start,
+                period_end=period_end,
+                activity_type=metric,
+                quantity=quantity,
+                unit=unit,
+            )
         )
-        db.add(ar)
-        db.flush()
-        ce = calculate_emissions(ar, factor)
-        db.add(ce)
-        count += 1
-
-    db.commit()
-    return count
+    if staged:
+        db.add_all(staged)
+        db.commit()
+        for draft in staged:
+            db.refresh(draft)
+    return staged
