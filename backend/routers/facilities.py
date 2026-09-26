@@ -15,16 +15,19 @@ router = APIRouter()
 @router.get("", response_model=list[FacilityResponse])
 def list_facilities(
     db: Session = Depends(get_db),
-    _user: User = Depends(get_current_user),
+    user: User = Depends(get_current_user),
 ) -> list[Facility]:
-    return db.query(Facility).order_by(Facility.created_at).all()
+    query = db.query(Facility).order_by(Facility.created_at)
+    if user.role.name != "admin":
+        query = query.filter(Facility.id == user.facility_id)
+    return query.all()
 
 
 @router.post("", response_model=FacilityResponse, status_code=status.HTTP_201_CREATED)
 def create_facility(
     payload: FacilityCreate,
     db: Session = Depends(get_db),
-    _user: User = Depends(require_role("admin", "facility_manager")),
+    user: User = Depends(require_role("admin", "facility_manager")),
 ) -> Facility:
     facility = Facility(
         name=payload.name,
@@ -35,4 +38,10 @@ def create_facility(
     db.add(facility)
     db.commit()
     db.refresh(facility)
+
+    # Auto-assign facility to the creating user if they don't have one
+    if user.facility_id is None:
+        user.facility_id = facility.id
+        db.commit()
+
     return facility
