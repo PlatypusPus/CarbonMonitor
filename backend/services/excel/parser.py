@@ -86,7 +86,19 @@ def parse_workbook(
         raise ValueError(f"{filename}: not a readable Excel workbook") from exc
 
     try:
-        sheet = workbook[sheet_name] if sheet_name else workbook.active
+        if sheet_name:
+            sheet = workbook[sheet_name]
+        else:
+            # Find the first non-empty sheet (has at least one row with data)
+            sheet = None
+            for ws in workbook.worksheets:
+                first_row = next(ws.iter_rows(values_only=True), None)
+                if first_row and any(cell is not None and str(cell).strip() != "" for cell in first_row):
+                    sheet = ws
+                    break
+            if sheet is None:
+                # Fallback to active sheet if all sheets appear empty
+                sheet = workbook.active
         raw_rows = [list(row) for row in sheet.iter_rows(values_only=True)]
         used_sheet = sheet
     except KeyError as exc:
