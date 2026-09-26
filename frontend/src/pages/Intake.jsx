@@ -89,18 +89,28 @@ export default function Intake() {
 
   const upload = useMutation({
     mutationFn: async (f) => {
-      const spreadsheet = isSpreadsheet(f);
+      const isXlsx = (f.name || "").toLowerCase().endsWith(".xlsx");
+      const isCsv = (f.name || "").toLowerCase().endsWith(".csv");
       const fd = new FormData();
       fd.append("file", f);
       if (facilityId) fd.append("facility_id", facilityId);
-      const { data } = await client.post(spreadsheet ? "/upload" : "/activity/ocr", fd, {
+      // Route .xlsx to the Excel intake endpoint; .csv and others to legacy upload or OCR
+      let endpoint;
+      if (isXlsx) {
+        endpoint = "/activity/excel";
+      } else if (isCsv) {
+        endpoint = "/upload";
+      } else {
+        endpoint = "/activity/ocr";
+      }
+      const { data } = await client.post(endpoint, fd, {
         headers: { "Content-Type": "multipart/form-data" },
       });
-      return { data, spreadsheet };
+      return { data, isXlsx, isCsv };
     },
-    onSuccess: async ({ data, spreadsheet }) => {
+    onSuccess: async ({ data, isXlsx, isCsv }) => {
       const before = new Set(savedDrafts.map((draft) => draft.id));
-      const staged = spreadsheet ? data.row_count : (data?.length ?? 0);
+      const staged = (isXlsx || isCsv) ? data.row_count : (data?.length ?? 0);
       const fresh = await draftsQuery.refetch();
       const created = (fresh.data ?? []).filter((draft) => !before.has(draft.id));
       setCurrentDrafts(created);
@@ -257,7 +267,9 @@ export default function Intake() {
     upload.reset();
   }
 
-  const spreadsheet = isSpreadsheet(file);
+  const isXlsx = (file?.name || "").toLowerCase().endsWith(".xlsx");
+  const isCsv = (file?.name || "").toLowerCase().endsWith(".csv");
+  const isSpreadsheetFile = isXlsx || isCsv;
   const submitting = upload.isPending;
 
   return (
@@ -327,7 +339,7 @@ export default function Intake() {
                 <div className="text-sm text-muted">No facilities yet — create one below.</div>
               )}
               <p className="text-xs text-muted">
-                {spreadsheet
+                {isSpreadsheetFile
                   ? "Rows in this file are staged under the selected facility."
                   : "Applied to the scanned document — it overrides any facility printed on the bill."}
               </p>
@@ -359,7 +371,7 @@ export default function Intake() {
             >
               {submitting ? (
                 <Loader2 className="mx-auto h-5 w-5 animate-spin" />
-              ) : spreadsheet ? (
+              ) : isSpreadsheetFile ? (
                 "Upload"
               ) : (
                 "Scan & extract"
