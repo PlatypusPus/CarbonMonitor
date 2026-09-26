@@ -61,8 +61,16 @@ def test_extract_activity_from_document_parses_pdf_text() -> None:
     assert result["unit"] == "kWh"
 
 
+def _get_test_font(size: int = 48):
+    """Get a font for tests, using default PIL font as fallback."""
+    try:
+        return ImageFont.truetype("/System/Library/Fonts/Supplemental/Arial.ttf", size)
+    except OSError:
+        return ImageFont.load_default()
+
+
 def test_extract_activity_from_document_ocrs_scanned_pdf() -> None:
-    font = ImageFont.truetype("/System/Library/Fonts/Supplemental/Arial.ttf", 48)
+    font = _get_test_font(48)
     image = Image.new("RGB", (2550, 3300), "white")
     draw = ImageDraw.Draw(image)
     lines = [
