@@ -40,12 +40,12 @@ def _parse_number(value: object) -> float | None:
     """Parse a numeric cell, tolerating currency symbols, spaces, and commas.
 
     Indian thousand grouping (``1,34,050``) is handled by stripping every comma.
-    Empty/None cells -> None; present-but-garbage values raise a row error.
+    Empty/None cells -> None; present-but-unparseable values raise a row error.
     """
     if value is None:
         return None
     if isinstance(value, bool):
-        return None
+        raise ValueError(f"boolean value '{value}' is not a valid number")
     if isinstance(value, (int, float)):
         return float(value)
 
