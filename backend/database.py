@@ -91,13 +91,22 @@ def _backfill_legacy_uploads() -> None:
     record) or discard it. Idempotent — a record already linked to a draft is
     skipped.
     """
+    from collections import defaultdict
     from sqlalchemy import select
 
-    from models.activity_record import ActivityRecord
+    from models.activity_record import ActivityRecord, SOURCES
     from models.ocr_draft import OCRDraft
     from models.upload import Upload
     from models.user import User
-    from services.drafts import SOURCE_TYPE_UPLOAD
+    from services.drafts import SOURCE_TYPE_OCR, SOURCE_TYPE_EXCEL, SOURCE_TYPE_UPLOAD
+
+    # Map ActivityRecord.source -> OCRDraft.source_type
+    SOURCE_MAP = {
+        "csv": SOURCE_TYPE_UPLOAD,
+        "ocr": SOURCE_TYPE_OCR,
+        "excel": SOURCE_TYPE_EXCEL,
+        "manual": SOURCE_TYPE_UPLOAD,
+    }
 
     with SessionLocal() as db:
         # NULL activity_record_id must be excluded from the subquery: NOT IN
@@ -114,33 +123,36 @@ def _backfill_legacy_uploads() -> None:
         if not pending:
             return
 
-        # Attribute the drafts to whoever uploaded the file, falling back to any
-        # user at that facility.
-        facility_id = pending[0].facility_id
-        upload = db.query(Upload).filter(Upload.facility_id == facility_id).first()
-        owner = db.query(User).filter(User.facility_id == facility_id).first()
-        owner_id = upload.user_id if upload else (owner.id if owner else None)
-        if owner_id is None:
-            return
+        # Group records by facility to assign each facility's drafts to a user from that facility
+        by_facility: dict[str, list[ActivityRecord]] = defaultdict(list)
+        for record in pending:
+            by_facility[str(record.facility_id)].append(record)
 
-        db.add_all(
-            [
-                OCRDraft(
-                    user_id=owner_id,
-                    source_filename=upload.filename if upload else "legacy-upload.csv",
-                    source_type=SOURCE_TYPE_UPLOAD,
-                    facility_id=record.facility_id,
-                    period_start=record.period_start,
-                    period_end=record.period_end,
-                    activity_type=record.activity_type,
-                    quantity=record.quantity,
-                    unit=record.unit,
-                    status="draft",
-                    activity_record_id=record.id,
-                )
-                for record in pending
-            ]
-        )
+        for facility_id, records in by_facility.items():
+            upload = db.query(Upload).filter(Upload.facility_id == facility_id).first()
+            owner = db.query(User).filter(User.facility_id == facility_id).first()
+            owner_id = upload.user_id if upload else (owner.id if owner else None)
+            if owner_id is None:
+                continue
+
+            db.add_all(
+                [
+                    OCRDraft(
+                        user_id=owner_id,
+                        source_filename=upload.filename if upload else "legacy-upload.csv",
+                        source_type=SOURCE_MAP.get(record.source, SOURCE_TYPE_UPLOAD),
+                        facility_id=record.facility_id,
+                        period_start=record.period_start,
+                        period_end=record.period_end,
+                        activity_type=record.activity_type,
+                        quantity=record.quantity,
+                        unit=record.unit,
+                        status="draft",
+                        activity_record_id=record.id,
+                    )
+                    for record in records
+                ]
+            )
         db.commit()
 
 
@@ -172,11 +184,14 @@ def _ensure_ingest_schema() -> None:
         )
         try:
             db.execute(text("ALTER TYPE activity_source_enum ADD VALUE 'excel'"))
-        except Exception:
-            # Already exists (fresh DB created from the current model) — safe.
-            db.rollback()
-        else:
             db.commit()
+        except Exception as e:
+            # Only swallow "already exists" error (PostgreSQL SQLSTATE 42710)
+            # Re-raise other errors (e.g., permissions, syntax) so they surface.
+            if "already exists" not in str(e).lower():
+                db.rollback()
+                raise
+            db.rollback()
 
 
 def _seed_roles() -> None:
