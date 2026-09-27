@@ -12,7 +12,7 @@ from database import Base
 
 # TODO: keep this list in sync with EmissionFactor.activity_type
 ACTIVITY_TYPES = ("electricity", "diesel", "petrol", "lpg")
-SOURCES = ("manual", "csv", "ocr")
+SOURCES = ("manual", "csv", "ocr", "excel")
 
 
 class ActivityRecord(Base):

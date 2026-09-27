@@ -1,4 +1,9 @@
-"""Emission data queries against Postgres."""
+"""Emission data queries against Postgres.
+
+Every aggregate here is restricted to reviewer-confirmed activity. Unconfirmed
+rows stay in the database (they are still pending review on the intake page) but
+must never move a dashboard or a report until a human approves them.
+"""
 
 from typing import Any
 
@@ -6,6 +11,8 @@ from sqlalchemy.orm import Session
 
 from models.activity_record import ActivityRecord
 from models.calculated_emission import CalculatedEmission
+
+CONFIRMED_ONLY = ActivityRecord.confirmed_by_user.is_(True)
 
 
 def query_latest(
@@ -20,7 +27,7 @@ def query_latest(
 
     q = db.query(CalculatedEmission, ActivityRecord, Facility).join(
         ActivityRecord, CalculatedEmission.activity_record_id == ActivityRecord.id
-    ).outerjoin(Facility, ActivityRecord.facility_id == Facility.id)
+    ).outerjoin(Facility, ActivityRecord.facility_id == Facility.id).filter(CONFIRMED_ONLY)
     if metric:
         q = q.filter(ActivityRecord.activity_type == metric)
     if source:
@@ -53,7 +60,7 @@ def query_timeseries(
     db: Session,
     metric: str,
     interval: str = "1h",
-    source: str | None = None,
+    source: str | list[str] | None = None,
 ) -> list[dict[str, Any]]:
     """Aggregate co2e_kg by time bucket (period_start)."""
     from sqlalchemy import func, text
@@ -81,15 +88,23 @@ def query_timeseries(
         )
         .join(ActivityRecord, CalculatedEmission.activity_record_id == ActivityRecord.id)
         .filter(ActivityRecord.activity_type == metric)
+        .filter(CONFIRMED_ONLY)
         .group_by(text("bucket"))
         .order_by(text("bucket"))
     )
     if source:
-        q = q.filter(ActivityRecord.source == source)
+        if isinstance(source, list):
+            q = q.filter(ActivityRecord.source.in_(source))
+        else:
+            q = q.filter(ActivityRecord.source == source)
     return [
         {"timestamp": r.bucket, "value": float(r.value) if r.value is not None else None, "count": r.count}
         for r in q.all()
     ]
+
+
+# Sources that represent externally uploaded data (CSV/XLSX uploads + Excel workbooks)
+UPLOAD_SOURCES = ("csv", "excel")
 
 
 def query_crossverify(
@@ -98,11 +113,11 @@ def query_crossverify(
     interval: str = "1d",
     source: str | None = None,
 ) -> list[dict[str, Any]]:
-    """Compare csv vs live (non-csv) per time bucket with discrepancy %."""
-    # source param ignored for cross-verify — always compares csv vs non-csv
-    upload_rows = {r["timestamp"]: r for r in query_timeseries(db, metric, interval, source="csv")}
-    # filter live to exclude csv: reuse query but we need non-csv — do manual query
-    # if live_rows currently includes all sources, recompute non-csv separately
+    """Compare upload (csv/excel) vs live (ocr/manual) per time bucket with discrepancy %."""
+    # source param ignored for cross-verify — always compares upload sources vs non-upload sources
+    upload_rows = {r["timestamp"]: r for r in query_timeseries(db, metric, interval, source=list(UPLOAD_SOURCES))}
+
+    # filter live to exclude upload sources: manual + ocr
     from sqlalchemy import func, text
 
     if interval not in _INTERVAL_MAP:
@@ -124,7 +139,8 @@ def query_crossverify(
         )
         .join(ActivityRecord, CalculatedEmission.activity_record_id == ActivityRecord.id)
         .filter(ActivityRecord.activity_type == metric)
-        .filter(ActivityRecord.source != "csv")
+        .filter(ActivityRecord.source.notin_(UPLOAD_SOURCES))
+        .filter(CONFIRMED_ONLY)
         .group_by(text("bucket"))
         .order_by(text("bucket"))
     )
@@ -157,6 +173,7 @@ def query_summary(db: Session) -> list[dict[str, Any]]:
             func.avg(CalculatedEmission.co2e_kg).label("avg_value"),
         )
         .join(ActivityRecord, CalculatedEmission.activity_record_id == ActivityRecord.id)
+        .filter(CONFIRMED_ONLY)
         .group_by(ActivityRecord.activity_type)
         .all()
     )
@@ -168,6 +185,7 @@ def query_summary(db: Session) -> list[dict[str, Any]]:
             CalculatedEmission.calculated_at.label("latest_timestamp"),
         )
         .join(ActivityRecord, CalculatedEmission.activity_record_id == ActivityRecord.id)
+        .filter(CONFIRMED_ONLY)
         .distinct(ActivityRecord.activity_type)
         .order_by(ActivityRecord.activity_type, CalculatedEmission.calculated_at.desc())
         .all()

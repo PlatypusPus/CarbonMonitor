@@ -1,13 +1,20 @@
-import { Activity, AlertTriangle, BarChart3, FileCheck, FileText, Upload } from "lucide-react";
+import {
+  Activity,
+  AlertTriangle,
+  BarChart3,
+  FileCheck,
+  FileText,
+  UploadCloud,
+} from "lucide-react";
 import { NavLink } from "react-router-dom";
 
 const links = [
+  { to: "/upload", label: "Data Intake", icon: UploadCloud },
   { to: "/", label: "Live Monitor", icon: Activity, end: true },
   { to: "/trends", label: "Trends & Analytics", icon: BarChart3 },
   { to: "/anomalies", label: "Anomaly Log", icon: AlertTriangle },
   { to: "/cross-verify", label: "Cross-Verification", icon: FileCheck },
   { to: "/esg-report", label: "ESG Report", icon: FileText },
-  { to: "/upload", label: "Upload Data", icon: Upload },
 ];
 
 export default function Sidebar() {

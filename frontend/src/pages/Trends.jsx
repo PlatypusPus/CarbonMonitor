@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { UploadCloud } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 
 import { useSummary, useTimeseries } from "../api/hooks";
@@ -16,6 +18,7 @@ const time = (ts) =>
   new Date(ts).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 
 export default function Trends() {
+  const navigate = useNavigate();
   const summary = useSummary();
   const metrics = summary.data ?? [];
 
@@ -31,9 +34,18 @@ export default function Trends() {
 
   return (
     <div className="flex flex-col gap-5">
-      <div>
-        <h1 className="text-2xl font-bold text-ink">Trends & Analytics</h1>
-        <p className="text-sm text-muted">Historical emission patterns by metric and interval</p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-ink">Trends & Analytics</h1>
+          <p className="text-sm text-muted">Historical emission patterns by metric and interval</p>
+        </div>
+        <button
+          onClick={() => navigate("/upload")}
+          className="inline-flex shrink-0 items-center gap-2 rounded-xl bg-leaf px-4 py-2.5 text-sm font-bold text-white shadow-card transition-colors hover:bg-leaf-hover"
+        >
+          <UploadCloud size={16} />
+          Upload data
+        </button>
       </div>
 
       <div className="flex flex-wrap items-center gap-3">

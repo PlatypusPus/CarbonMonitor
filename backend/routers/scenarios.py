@@ -36,7 +36,9 @@ def run_scenario_endpoint(scenario_in: ScenarioCreate, db: Session = Depends(get
     stmt = select(ActivityRecord).where(
         ActivityRecord.facility_id == scenario_in.facility_id,
         ActivityRecord.period_start == period.start_date,
-        ActivityRecord.period_end == period.end_date
+        ActivityRecord.period_end == period.end_date,
+        # Baseline a what-if projection on reviewed activity only.
+        ActivityRecord.confirmed_by_user.is_(True),
     ).limit(1)
     record = db.execute(stmt).scalar_one_or_none()
     

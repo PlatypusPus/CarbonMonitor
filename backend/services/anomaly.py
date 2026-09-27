@@ -81,6 +81,9 @@ def run_detection(db: Session) -> int:
         .join(ActivityRecord, CalculatedEmission.activity_record_id == ActivityRecord.id)
         .join(Facility, ActivityRecord.facility_id == Facility.id)
         .where(CalculatedEmission.calculated_at >= cutoff)
+        # Unconfirmed activity is still awaiting review; baselining it would
+        # raise anomalies against numbers a human hasn't approved yet.
+        .where(ActivityRecord.confirmed_by_user.is_(True))
     )
     
     results = db.execute(stmt).all()

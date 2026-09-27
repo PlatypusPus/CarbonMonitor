@@ -1,0 +1,1 @@
+"""Excel ingestion package — parse, detect, map, and normalize electricity workbooks."""
