@@ -1,0 +1,4 @@
+# CarbonTrace
+
+CarbonTrace is a carbon-accounting application for facility operations teams.
+It converts activity records into Scope 1 and 2 emissions data, anomaly alerts, and ESG reports.

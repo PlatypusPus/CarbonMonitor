@@ -1,26 +1,8 @@
-import { Eye, EyeOff } from "lucide-react";
+import { ArrowLeft, Eye, EyeOff, Leaf } from "lucide-react";
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 import { useAuth } from "../context/AuthContext";
-
-function LeafMark({ size = 26 }) {
-  return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.85"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M5 18 C5 9 12 4 20 4 C20 12 15 19 6 19 Z" />
-      <path d="M5 19 C8 14 12 11 16 9" />
-    </svg>
-  );
-}
 
 export default function Login() {
   const { login } = useAuth();
@@ -37,7 +19,7 @@ export default function Login() {
     setSubmitting(true);
     try {
       await login(email, password);
-      navigate("/", { replace: true });
+      navigate("/onboarding", { replace: true });
     } catch {
       setError("Incorrect email or password");
     } finally {
@@ -53,7 +35,7 @@ export default function Login() {
         <div className="absolute -bottom-32 -left-24 h-96 w-96 rounded-full bg-white/[0.06]" />
         <div className="relative flex w-fit items-center gap-3">
           <div className="grid h-11 w-11 place-items-center rounded-xl border border-white/30 bg-white/20">
-            <LeafMark />
+            <Leaf size={26} />
           </div>
           <span className="text-2xl font-bold tracking-tight">CarbonTrace</span>
         </div>
@@ -71,13 +53,16 @@ export default function Login() {
       {/* Form panel */}
       <div className="flex items-center justify-center bg-surface px-10 py-12">
         <div className="w-full max-w-sm">
+          <Link to="/" className="mb-8 inline-flex items-center gap-2 text-sm font-semibold text-body hover:text-leaf"><ArrowLeft size={16} /> Back to home</Link>
           <h1 className="text-3xl font-bold tracking-tight text-ink">Welcome back</h1>
           <p className="mb-9 mt-2 text-lg text-body">Sign in to your CarbonTrace workspace.</p>
 
           <form onSubmit={handleSubmit} className="flex flex-col">
-            <label className="mb-2 text-sm font-semibold text-ink">Work email</label>
+            <label htmlFor="email" className="mb-2 text-sm font-semibold text-ink">Work email</label>
             <input
+              id="email"
               type="email"
+              autoComplete="email"
               required
               value={email}
               onChange={(event) => setEmail(event.target.value)}
@@ -85,10 +70,12 @@ export default function Login() {
               className="mb-5 rounded-xl border-[1.5px] border-line bg-[#FBFCFB] px-4 py-3.5 text-ink outline-none focus:border-leaf focus:bg-white"
             />
 
-            <label className="mb-2 text-sm font-semibold text-ink">Password</label>
+            <label htmlFor="password" className="mb-2 text-sm font-semibold text-ink">Password</label>
             <div className="relative mb-6">
               <input
+                id="password"
                 type={showPw ? "text" : "password"}
+                autoComplete="current-password"
                 required
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
@@ -110,7 +97,7 @@ export default function Login() {
             <button
               type="submit"
               disabled={submitting}
-              className="rounded-xl bg-leaf py-4 text-lg font-bold text-white shadow-card transition-colors hover:bg-leaf-hover disabled:opacity-60"
+              className="rounded-xl bg-leaf-action py-4 text-lg font-bold text-white shadow-card transition-colors hover:bg-leaf-action-hover disabled:opacity-60"
             >
               {submitting ? "Signing in…" : "Sign in"}
             </button>

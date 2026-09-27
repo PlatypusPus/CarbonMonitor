@@ -13,7 +13,7 @@ const INTERVALS = [
 ];
 
 const fmt = (n, d = 1) =>
-  typeof n === "number" ? n.toLocaleString(undefined, { maximumFractionDigits: d }) : "–";
+  typeof n === "number" ? n.toLocaleString(undefined, { maximumFractionDigits: d }) : "-";
 const time = (ts) =>
   new Date(ts).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 

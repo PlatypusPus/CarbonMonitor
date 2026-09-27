@@ -2,7 +2,7 @@ import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YA
 
 import { useAnomalies, useLatest, useSummary, useTimeseries } from "../api/hooks";
 
-const fmt = (n) => (typeof n === "number" ? n.toLocaleString(undefined, { maximumFractionDigits: 1 }) : "–");
+const fmt = (n) => (typeof n === "number" ? n.toLocaleString(undefined, { maximumFractionDigits: 1 }) : "-");
 const time = (ts) => new Date(ts).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 
 function LivePill() {
@@ -114,7 +114,7 @@ export default function Dashboard() {
         ))}
         <StatCard
           label="Anomalies"
-          value={anomalies.data?.length ?? "–"}
+          value={anomalies.data?.length ?? "-"}
           unit="active"
           accent="peach"
         />

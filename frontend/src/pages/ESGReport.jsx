@@ -19,7 +19,7 @@ export default function ESGReport() {
       a.click();
       URL.revokeObjectURL(url);
     } catch {
-      setError("Failed to generate report. Make sure Elasticsearch is reachable.");
+      setError("Failed to generate the report. Please try again.");
     } finally {
       setLoading(false);
     }

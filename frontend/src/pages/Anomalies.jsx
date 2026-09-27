@@ -1,7 +1,7 @@
 import { useAnomalies } from "../api/hooks";
 
 const fmt = (n, d = 2) =>
-  typeof n === "number" ? n.toLocaleString(undefined, { maximumFractionDigits: d }) : "–";
+  typeof n === "number" ? n.toLocaleString(undefined, { maximumFractionDigits: d }) : "-";
 const ts = (t) =>
   new Date(t).toLocaleString([], {
     month: "short",
@@ -32,7 +32,7 @@ export default function Anomalies() {
       <div>
         <h1 className="text-2xl font-bold text-ink">Anomaly Log</h1>
         <p className="text-sm text-muted">
-          Isolation Forest–flagged emission spikes (last 7 days)
+          Isolation Forest flagged emission spikes from the last 7 days
         </p>
       </div>
 
@@ -59,11 +59,11 @@ export default function Anomalies() {
               {rows.map((r, i) => (
                 <tr key={i} className="border-b border-line last:border-0 hover:bg-canvas">
                   <td className="whitespace-nowrap px-4 py-3 font-mono text-xs text-muted">
-                    {r.timestamp ? ts(r.timestamp) : "–"}
+                    {r.timestamp ? ts(r.timestamp) : "-"}
                   </td>
-                  <td className="px-4 py-3 font-mono text-xs text-ink">{r.metric ?? "–"}</td>
+                  <td className="px-4 py-3 font-mono text-xs text-ink">{r.metric ?? "-"}</td>
                   <td className="px-4 py-3 text-ink">
-                    {r.facility_name ?? r.source ?? r.region ?? "–"}
+                    {r.facility_name ?? r.source ?? r.region ?? "-"}
                   </td>
                   <td className="px-4 py-3 font-mono text-ink">
                     {fmt(r.value)}{" "}
@@ -71,7 +71,7 @@ export default function Anomalies() {
                   </td>
                   <td className="px-4 py-3 font-mono text-muted">{fmt(r.expected_value)}</td>
                   <td className="px-4 py-3">
-                    {r.anomaly_score != null ? <ScoreBadge score={r.anomaly_score} /> : "–"}
+                    {r.anomaly_score != null ? <ScoreBadge score={r.anomaly_score} /> : "-"}
                   </td>
                 </tr>
               ))}

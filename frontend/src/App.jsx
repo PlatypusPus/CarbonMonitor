@@ -3,28 +3,37 @@ import { Navigate, Route, Routes } from "react-router-dom";
 import Layout from "./components/Layout";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Anomalies from "./pages/Anomalies";
-import CrossVerify from "./pages/CrossVerify";
 import Dashboard from "./pages/Dashboard";
 import ESGReport from "./pages/ESGReport";
+import Landing from "./pages/Landing";
 import Login from "./pages/Login";
+import Onboarding from "./pages/Onboarding";
 import Trends from "./pages/Trends";
 import Intake from "./pages/Intake";
+import { useAuth } from "./context/AuthContext";
+import { getOnboarding } from "./lib/onboarding";
+
+function Workspace() {
+  const { user } = useAuth();
+  return getOnboarding(user?.id) ? <Layout /> : <Navigate to="/onboarding" replace />;
+}
 
 export default function App() {
   return (
     <Routes>
+      <Route path="/" element={<Landing />} />
       <Route path="/login" element={<Login />} />
+      <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
       <Route
         element={
           <ProtectedRoute>
-            <Layout />
+            <Workspace />
           </ProtectedRoute>
         }
       >
-        <Route path="/" element={<Dashboard />} />
+        <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/trends" element={<Trends />} />
         <Route path="/anomalies" element={<Anomalies />} />
-        <Route path="/cross-verify" element={<CrossVerify />} />
         <Route path="/ocr" element={<Navigate to="/upload" replace />} />
         <Route path="/esg-report" element={<ESGReport />} />
         <Route path="/upload" element={<Intake />} />

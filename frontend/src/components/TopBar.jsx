@@ -15,7 +15,7 @@ export default function TopBar() {
         <span className="font-bold text-ink">CarbonTrace</span>
       </div>
       <div className="flex items-center gap-3">
-        <button className="rounded-lg border border-line p-2 text-body transition-colors hover:bg-canvas">
+        <button className="rounded-lg border border-line p-2 text-body transition-colors hover:bg-canvas" aria-label="Notifications">
           <Bell size={18} />
         </button>
         <div className="grid h-9 w-9 place-items-center rounded-full bg-mint text-sm font-semibold text-leaf-deep">
@@ -25,6 +25,7 @@ export default function TopBar() {
           onClick={logout}
           className="rounded-lg border border-line p-2 text-body transition-colors hover:bg-canvas"
           title="Log out"
+          aria-label="Log out"
         >
           <LogOut size={18} />
         </button>

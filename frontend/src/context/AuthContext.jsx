@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useRef, useState } from "react";
 
 import client, { setAccessToken } from "../api/client";
 
@@ -7,8 +7,17 @@ const AuthContext = createContext(null);
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const attemptedRefresh = useRef(false);
 
   useEffect(() => {
+    if (attemptedRefresh.current) return;
+    attemptedRefresh.current = true;
+
+    if (["/", "/login"].includes(window.location.pathname)) {
+      setLoading(false);
+      return;
+    }
+
     (async () => {
       try {
         const { data } = await client.post("/auth/refresh");
@@ -28,6 +37,7 @@ export function AuthProvider({ children }) {
     setAccessToken(data.access_token);
     const me = await client.get("/auth/me");
     setUser(me.data);
+    return me.data;
   }
 
   async function logout() {
