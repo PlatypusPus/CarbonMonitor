@@ -5,7 +5,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 
-from sqlalchemy import CheckConstraint, DateTime, Float, ForeignKey, Integer, Uuid, func
+from sqlalchemy import CheckConstraint, DateTime, Float, ForeignKey, Integer, Uuid, func, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from database import Base
@@ -15,6 +15,7 @@ class CalculatedEmission(Base):
     __tablename__ = "calculated_emissions"
     __table_args__ = (
         CheckConstraint("scope IN (1, 2)", name="check_scope_1_2"),
+        UniqueConstraint("activity_record_id", name="uq_calculated_emission_activity_record"),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)

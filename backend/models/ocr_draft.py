@@ -6,7 +6,7 @@ import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import DateTime, ForeignKey, Integer, String, Uuid, func
+from sqlalchemy import DateTime, ForeignKey, Integer, String, Uuid, func, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from database import Base
@@ -18,6 +18,18 @@ if TYPE_CHECKING:
 
 class OCRDraft(Base):
     __tablename__ = "ocr_drafts"
+    __table_args__ = (
+        UniqueConstraint(
+            "facility_id",
+            "period_start",
+            "period_end",
+            "activity_type",
+            "quantity",
+            "unit",
+            "source_type",
+            name="uq_ocr_draft_key",
+        ),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
     user_id: Mapped[uuid.UUID] = mapped_column(

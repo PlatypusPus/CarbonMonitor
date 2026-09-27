@@ -51,52 +51,6 @@ def _display_cell(value):
     return text or None
 
 
-def preview_workbook(
-    content: bytes, facility_name: str | None = None
-) -> tuple[list[str], list[list[str | None]], int]:
-    """Curated preview of an electricity workbook: important columns + rows.
-
-    Returns ``(columns, rows, row_count)``. ``columns`` is empty when the
-    sheet has none of the important headers, signalling the caller to fall
-    back to the canonical CSV preview.
-    """
-    from io import BytesIO
-
-    from openpyxl import load_workbook
-
-    workbook = load_workbook(BytesIO(content), read_only=True, data_only=True)
-    sheet = workbook.active
-    raw = [list(row) for row in sheet.iter_rows(values_only=True)]
-    workbook.close()
-
-    if not raw:
-        return [], [], 0
-
-    headers = [
-        (index, str(cell).strip().lower() if cell is not None else "")
-        for index, cell in enumerate(raw[0])
-    ]
-    selected = [index for index, header in headers if header in PREVIEW_IMPORTANT_HEADERS]
-    if not selected:
-        return [], [], 0
-
-    columns = [
-        str(raw[0][index]).strip() if raw[0][index] is not None else f"Column {index + 1}"
-        for index in selected
-    ]
-    data_rows = [
-        row
-        for row in raw[1:]
-        if any(cell is not None and str(cell).strip() != "" for cell in row)
-    ]
-    columns.append("Facility")
-    rows = [
-        [_display_cell(row[index]) for index in selected] + [facility_name]
-        for row in data_rows[:PREVIEW_ROW_LIMIT]
-    ]
-    return columns, rows, len(data_rows)
-
-
 @router.post("/preview", response_model=UploadPreviewResponse)
 async def preview_upload(
     file: UploadFile = File(...),
@@ -115,8 +69,58 @@ async def preview_upload(
     is_xlsx = (file.filename or "").lower().endswith(".xlsx")
 
     try:
-        csv_bytes = convert_xlsx_to_csv_bytes(content) if is_xlsx else content
-        rows = parse_emissions_csv(csv_bytes)
+        if is_xlsx:
+            # Use the same Excel parser as the real ingestion path
+            from services.excel.parser import parse_workbook
+            from services.excel.detector import detect_electricity_workbook
+
+            parsed = parse_workbook(content, filename=file.filename or "excel-upload")
+
+            if not detect_electricity_workbook(parsed):
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    detail=f"{parsed.filename}: not recognized as an electricity workbook",
+                )
+
+            target_facility_id = facility_id or user.facility_id
+            if target_facility_id is not None:
+                check_facility_access(user, target_facility_id)
+            facility = db.get(Facility, target_facility_id) if target_facility_id else None
+
+            # Use normalized headers and first few data rows for preview
+            columns = list(parsed.headers)
+            # Filter out empty headers
+            columns = [c for c in columns if c]
+
+            # Map normalized -> raw for display
+            header_map = dict(zip(parsed.headers, parsed.raw_headers))
+
+            # Get first few data rows
+            preview_rows = []
+            for row in parsed.rows[:PREVIEW_ROW_LIMIT]:
+                row_data = []
+                for header in parsed.headers:
+                    if header:
+                        value = row.values[parsed.headers.index(header)]
+                        row_data.append(_display_cell(value))
+                if facility and facility.name:
+                    row_data.append(facility.name)
+                preview_rows.append(row_data)
+
+            columns_display = [header_map.get(c, c) for c in columns]
+            if facility and facility.name:
+                columns_display.append("Facility")
+
+            return UploadPreviewResponse(
+                filename=file.filename or "excel-upload",
+                columns=columns_display,
+                rows=preview_rows,
+                row_count=len(parsed.rows),
+            )
+        else:
+            # CSV path unchanged
+            csv_bytes = content
+            rows = parse_emissions_csv(csv_bytes)
     except ValueError as exc:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)
@@ -126,26 +130,6 @@ async def preview_upload(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail=f"Failed to parse xlsx: {exc}",
         ) from exc
-
-    if is_xlsx:
-        target_facility_id = facility_id or user.facility_id
-        facility = db.get(Facility, target_facility_id) if target_facility_id else None
-        try:
-            columns, preview_rows, row_count = preview_workbook(
-                content, facility.name if facility else None
-            )
-        except Exception as exc:
-            # A malformed-but-parseable workbook must not surface as a 500 with
-            # no body; fall back to the canonical CSV preview instead.
-            logger.warning("workbook preview failed for %s: %s", file.filename, exc)
-            columns, preview_rows, row_count = [], [], 0
-        if columns:
-            return UploadPreviewResponse(
-                filename=file.filename or "upload.xlsx",
-                columns=columns,
-                rows=preview_rows,
-                row_count=row_count,
-            )
 
     return UploadPreviewResponse(
         filename=file.filename or "upload.csv",

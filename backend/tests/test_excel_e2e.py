@@ -70,6 +70,7 @@ from main import app  # noqa: E402
 # this module runs; a session fixture keeps a single set of seeded roles.
 from database import SessionLocal  # noqa: E402
 from models.activity_record import ActivityRecord  # noqa: E402
+from models.calculated_emission import CalculatedEmission  # noqa: E402
 from models.facility import Facility  # noqa: E402
 from models.ocr_draft import OCRDraft  # noqa: E402
 from models.role import Role  # noqa: E402
@@ -106,6 +107,7 @@ def _reset_test_data() -> None:
     tables exist.
     """
     with SessionLocal() as db:
+        db.query(CalculatedEmission).delete()
         db.query(OCRDraft).delete()
         db.query(ActivityRecord).delete()
         db.query(Upload).delete()
@@ -255,8 +257,8 @@ def test_excel_ingestion_end_to_end(client: TestClient, e2e_setup: tuple[str, UU
 
     assert stored_count == 14
 
-    # The list endpoint reloads the persisted drafts (create + confirm flow).
-    list_response = client.get("/api/activity", headers=headers)
+    # The drafts list endpoint reloads the persisted drafts.
+    list_response = client.get("/api/activity/drafts", headers=headers)
     assert list_response.status_code == 200
     listed_ids = {draft["id"] for draft in list_response.json()}
     assert draft["id"] in listed_ids

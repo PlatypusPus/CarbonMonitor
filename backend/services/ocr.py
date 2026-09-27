@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import csv
 import re
+from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeoutError
 from datetime import date, datetime
 from io import BytesIO, StringIO
 from typing import Iterable
@@ -26,9 +27,34 @@ HEADER_ALIASES: dict[str, tuple[str, ...]] = {
 KNOWN_HEADERS = frozenset().union(*HEADER_ALIASES.values())
 BINARY_EXTENSIONS = (".pdf", ".png", ".jpg", ".jpeg", ".webp", ".xlsx", ".xlsm", ".zip")
 
+# OCR resource limits
+MAX_FILE_SIZE_MB = 10
+MAX_PDF_PAGES = 5
+MAX_PIXELS = 4_000_000  # ~2000x2000
+OCR_TIMEOUT_SECONDS = 30
+
+_thread_pool = ThreadPoolExecutor(max_workers=2)
+
+
+def _check_file_size(file: bytes) -> None:
+    if len(file) > MAX_FILE_SIZE_MB * 1024 * 1024:
+        raise ValueError(f"File exceeds {MAX_FILE_SIZE_MB} MB limit")
+
+
+def _check_pdf_pages(file: bytes) -> int:
+    from pypdf import PdfReader
+    reader = PdfReader(BytesIO(file))
+    num_pages = len(reader.pages)
+    if num_pages > MAX_PDF_PAGES:
+        raise ValueError(f"PDF exceeds {MAX_PDF_PAGES} page limit ({num_pages} pages)")
+    return num_pages
+
 
 def _extract_pdf_text(file: bytes) -> str:
     from pypdf import PdfReader
+
+    _check_file_size(file)
+    _check_pdf_pages(file)
 
     reader = PdfReader(BytesIO(file))
     text = "\n".join(page.extract_text() or "" for page in reader.pages).strip()
@@ -48,7 +74,10 @@ def _extract_pdf_text(file: bytes) -> str:
     parts: list[str] = []
     try:
         for page in doc:
-            pix = page.get_pixmap(dpi=300, alpha=False)
+            # Limit DPI and check pixel count
+            pix = page.get_pixmap(dpi=200, alpha=False)  # Reduced from 300 DPI
+            if pix.width * pix.height > MAX_PIXELS:
+                raise ValueError(f"Page exceeds {MAX_PIXELS:,} pixel limit ({pix.width}x{pix.height})")
             image = Image.open(BytesIO(pix.tobytes("png")))
             parts.append(pytesseract.image_to_string(image, config="--psm 6"))
     except Exception as exc:
@@ -61,6 +90,15 @@ def _extract_pdf_text(file: bytes) -> str:
     return text
 
 
+def _run_ocr_with_timeout(func, *args, **kwargs) -> str:
+    """Run OCR function with timeout to prevent worker exhaustion."""
+    future = _thread_pool.submit(func, *args, **kwargs)
+    try:
+        return future.result(timeout=OCR_TIMEOUT_SECONDS)
+    except FuturesTimeoutError:
+        raise ValueError(f"OCR timed out after {OCR_TIMEOUT_SECONDS} seconds")
+
+
 def _extract_image_text(file: bytes) -> str:
     try:
         from PIL import Image
@@ -68,13 +106,20 @@ def _extract_image_text(file: bytes) -> str:
     except Exception as exc:
         raise ValueError("OCR image support is unavailable") from exc
 
-    with Image.open(BytesIO(file)) as image:
-        return pytesseract.image_to_string(image)
+    _check_file_size(file)
+
+    def _ocr_image():
+        with Image.open(BytesIO(file)) as image:
+            if image.width * image.height > MAX_PIXELS:
+                raise ValueError(f"Image exceeds {MAX_PIXELS:,} pixel limit ({image.width}x{image.height})")
+            return pytesseract.image_to_string(image)
+
+    return _run_ocr_with_timeout(_ocr_image)
 
 
 def _extract_text(file: bytes) -> str:
     if file.startswith(b"%PDF"):
-        return _extract_pdf_text(file)
+        return _run_ocr_with_timeout(_extract_pdf_text, file)
 
     try:
         return _extract_image_text(file)

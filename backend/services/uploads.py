@@ -6,6 +6,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Any
 from uuid import UUID
 
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from models.ocr_draft import OCRDraft
@@ -109,6 +110,11 @@ def stage_upload_drafts(
     upload can never reach a dashboard. Rows already staged or confirmed for
     this facility and source are skipped, which makes re-uploading a file a
     no-op instead of a double count.
+
+    Uses database unique constraint (uq_ocr_draft_key) for concurrency-safe
+    idempotency. Inserts are attempted for each row; conflicts are caught and
+    skipped, making this safe under concurrent uploads and duplicate rows in
+    the same file.
     """
     staged: list[OCRDraft] = []
     for row in rows:
@@ -117,6 +123,8 @@ def stage_upload_drafts(
         metric = row["metric"]
         quantity = row["value"]
         unit = row.get("unit") or "kWh"
+
+        # Pre-check avoids unnecessary INSERT attempts for the common case
         if draft_exists(
             db,
             facility_id=facility_id,
@@ -128,22 +136,26 @@ def stage_upload_drafts(
             source_type=SOURCE_TYPE_UPLOAD,
         ):
             continue
-        staged.append(
-            build_draft(
-                user_id=user_id,
-                facility_id=facility_id,
-                source_filename=filename,
-                source_type=SOURCE_TYPE_UPLOAD,
-                period_start=period_start,
-                period_end=period_end,
-                activity_type=metric,
-                quantity=quantity,
-                unit=unit,
-            )
+
+        draft = build_draft(
+            user_id=user_id,
+            facility_id=facility_id,
+            source_filename=filename,
+            source_type=SOURCE_TYPE_UPLOAD,
+            period_start=period_start,
+            period_end=period_end,
+            activity_type=metric,
+            quantity=quantity,
+            unit=unit,
         )
-    if staged:
-        db.add_all(staged)
-        db.commit()
-        for draft in staged:
+        try:
+            db.add(draft)
+            db.commit()
             db.refresh(draft)
+            staged.append(draft)
+        except IntegrityError:
+            db.rollback()
+            # Unique constraint violated — another row in this upload or a
+            # concurrent upload already inserted this draft key. Skip.
+            continue
     return staged

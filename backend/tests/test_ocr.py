@@ -63,14 +63,28 @@ def test_extract_activity_from_document_parses_pdf_text() -> None:
 
 def _get_test_font(size: int = 48):
     """Get a font for tests, using default PIL font as fallback."""
+    # Try common font paths across platforms
+    font_paths = [
+        "/System/Library/Fonts/Supplemental/Arial.ttf",  # macOS
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",  # Linux (Debian/Ubuntu)
+        "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",  # Linux (Fedora/RHEL)
+        "/usr/share/fonts/TTF/DejaVuSans.ttf",  # Arch Linux
+    ]
+    for path in font_paths:
+        try:
+            return ImageFont.truetype(path, size)
+        except OSError:
+            continue
+    # Fallback: use default font but at a larger size for readability
+    # Note: load_default() ignores size parameter in older PIL, so we use a workaround
     try:
-        return ImageFont.truetype("/System/Library/Fonts/Supplemental/Arial.ttf", size)
-    except OSError:
+        return ImageFont.load_default(size)
+    except TypeError:
         return ImageFont.load_default()
 
 
 def test_extract_activity_from_document_ocrs_scanned_pdf() -> None:
-    font = _get_test_font(48)
+    font = _get_test_font(72)  # Larger font for readability after PDF scaling
     image = Image.new("RGB", (2550, 3300), "white")
     draw = ImageDraw.Draw(image)
     lines = [
@@ -82,7 +96,7 @@ def test_extract_activity_from_document_ocrs_scanned_pdf() -> None:
         "Unit: kWh",
     ]
     for i, line in enumerate(lines):
-        draw.text((120, 120 + i * 360), line, fill="black", font=font)
+        draw.text((120, 120 + i * 400), line, fill="black", font=font)
 
     img_buffer = BytesIO()
     image.save(img_buffer, format="PNG")

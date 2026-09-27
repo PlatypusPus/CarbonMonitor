@@ -31,8 +31,6 @@ def init_db() -> None:
     _ensure_ingest_schema()
     _seed_roles()
     _seed_defaults()
-    _backfill_legacy_uploads()
-    _backfill_missing_emissions()
 
 
 def _backfill_missing_emissions() -> None:
@@ -44,8 +42,10 @@ def _backfill_missing_emissions() -> None:
     emission, this tops up the historical rows. Idempotent — a record that
     already has an emission is skipped, and a record with no resolvable factor
     is left alone rather than guessed at.
+
+    Uses ON CONFLICT DO NOTHING to be safe under concurrent execution.
     """
-    from sqlalchemy import select
+    from sqlalchemy import select, text
 
     from models.activity_record import ActivityRecord
     from models.calculated_emission import CalculatedEmission
@@ -75,7 +75,22 @@ def _backfill_missing_emissions() -> None:
             )
             if factor is None:
                 continue
-            db.add(calculate_emissions(record, factor))
+            calc = calculate_emissions(record, factor)
+            db.execute(
+                text("""
+                    INSERT INTO calculated_emissions (id, activity_record_id, scope, co2e_kg, emission_factor_id, calculated_at)
+                    VALUES (:id, :activity_record_id, :scope, :co2e_kg, :emission_factor_id, :calculated_at)
+                    ON CONFLICT (activity_record_id) DO NOTHING
+                """),
+                {
+                    "id": calc.id,
+                    "activity_record_id": calc.activity_record_id,
+                    "scope": calc.scope,
+                    "co2e_kg": calc.co2e_kg,
+                    "emission_factor_id": calc.emission_factor_id,
+                    "calculated_at": calc.calculated_at,
+                },
+            )
             created += 1
         if created:
             db.commit()
@@ -90,11 +105,14 @@ def _backfill_legacy_uploads() -> None:
     reviewer can confirm it in place (the confirm step adopts the existing
     record) or discard it. Idempotent — a record already linked to a draft is
     skipped.
+
+    Uses ON CONFLICT DO NOTHING to be safe under concurrent execution.
     """
     from collections import defaultdict
-    from sqlalchemy import select
+    import uuid
+    from sqlalchemy import select, text
 
-    from models.activity_record import ActivityRecord, SOURCES
+    from models.activity_record import ActivityRecord
     from models.ocr_draft import OCRDraft
     from models.upload import Upload
     from models.user import User
@@ -135,24 +153,33 @@ def _backfill_legacy_uploads() -> None:
             if owner_id is None:
                 continue
 
-            db.add_all(
-                [
-                    OCRDraft(
-                        user_id=owner_id,
-                        source_filename=upload.filename if upload else "legacy-upload.csv",
-                        source_type=SOURCE_MAP.get(record.source, SOURCE_TYPE_UPLOAD),
-                        facility_id=record.facility_id,
-                        period_start=record.period_start,
-                        period_end=record.period_end,
-                        activity_type=record.activity_type,
-                        quantity=record.quantity,
-                        unit=record.unit,
-                        status="draft",
-                        activity_record_id=record.id,
-                    )
-                    for record in records
-                ]
-            )
+            for record in records:
+                draft_id = uuid.uuid4()
+                db.execute(
+                    text("""
+                        INSERT INTO ocr_drafts (id, user_id, source_filename, source_type, source_row, source_column,
+                            facility_id, period_start, period_end, activity_type, quantity, unit, status, activity_record_id, created_at)
+                        VALUES (:id, :user_id, :source_filename, :source_type, :source_row, :source_column,
+                            :facility_id, :period_start, :period_end, :activity_type, :quantity, :unit, :status, :activity_record_id, NOW())
+                        ON CONFLICT (activity_record_id) DO NOTHING
+                    """),
+                    {
+                        "id": draft_id,
+                        "user_id": owner_id,
+                        "source_filename": upload.filename if upload else "legacy-upload.csv",
+                        "source_type": SOURCE_MAP.get(record.source, SOURCE_TYPE_UPLOAD),
+                        "source_row": None,
+                        "source_column": None,
+                        "facility_id": record.facility_id,
+                        "period_start": record.period_start,
+                        "period_end": record.period_end,
+                        "activity_type": record.activity_type,
+                        "quantity": record.quantity,
+                        "unit": record.unit,
+                        "status": "draft",
+                        "activity_record_id": record.id,
+                    },
+                )
         db.commit()
 
 
