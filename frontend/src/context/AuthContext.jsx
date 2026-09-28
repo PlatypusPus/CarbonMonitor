@@ -1,10 +1,12 @@
 import { createContext, useContext, useEffect, useRef, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 
 import client, { setAccessToken } from "../api/client";
 
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
+  const queryClient = useQueryClient();
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const attemptedRefresh = useRef(false);
@@ -36,6 +38,7 @@ export function AuthProvider({ children }) {
     const { data } = await client.post("/auth/login", { email, password });
     setAccessToken(data.access_token);
     const me = await client.get("/auth/me");
+    queryClient.clear();
     setUser(me.data);
     return me.data;
   }
@@ -47,6 +50,7 @@ export function AuthProvider({ children }) {
       // ignore: clearing local state below is what matters
     }
     setAccessToken(null);
+    queryClient.clear();
     setUser(null);
   }
 

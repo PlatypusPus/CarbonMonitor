@@ -6,10 +6,12 @@ from uuid import uuid4
 
 import pytest
 from fastapi import HTTPException
+from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session
 
 from database import Base
+from main import app
 from models.activity_record import ActivityRecord
 from models.calculated_emission import CalculatedEmission
 from models.emission_factor import EmissionFactor
@@ -82,3 +84,15 @@ def test_fuel_defaults_and_manual_validation():
                     {"period_end": "2025-12-01"}, {"period_end": "2026-01-01"}]:
         with pytest.raises(ValueError):
             ActivityRecordCreate(**(data | invalid))
+
+
+def test_basic_auth_and_unique_routes():
+    client = TestClient(app)
+    assert client.get("/api/emissions/summary").status_code == 401
+    assert client.post("/api/auth/refresh").status_code == 401
+    logout = client.post("/api/auth/logout")
+    assert logout.status_code == 204
+    assert "Max-Age=0" in logout.headers["set-cookie"]
+    routes = [(method, route.path) for route in app.routes
+              for method in getattr(route, "methods", [])]
+    assert len(routes) == len(set(routes))

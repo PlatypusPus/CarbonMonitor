@@ -79,7 +79,8 @@ def logout(
     if refresh_token is not None:
         revoke_refresh_token(db, refresh_token)
     response.delete_cookie(REFRESH_COOKIE_NAME, path=REFRESH_COOKIE_PATH)
-    return Response(status_code=status.HTTP_204_NO_CONTENT)
+    response.status_code = status.HTTP_204_NO_CONTENT
+    return response
 
 
 @router.get("/me", response_model=UserResponse)
