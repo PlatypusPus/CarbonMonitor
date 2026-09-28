@@ -1,4 +1,4 @@
-"""Activity records router — ingest and manage ActivityRecord entries."""
+"""Activity records router â€” ingest and manage ActivityRecord entries."""
 
 from datetime import UTC, datetime, time
 from uuid import UUID
@@ -84,7 +84,7 @@ async def create_ocr_draft(
 
     ``facility_id`` is the facility picked in the intake UI. When supplied it
     wins over whatever facility the document names, and it doubles as the
-    fallback for documents that name none — so a bill without a facility label
+    fallback for documents that name none â€” so a bill without a facility label
     still stages instead of failing validation.
     """
     content = await file.read()
@@ -149,7 +149,7 @@ async def create_ocr_draft(
             drafts.append(draft)
         except IntegrityError:
             db.rollback()
-            # Unique constraint violated — concurrent upload already inserted this draft key. Skip.
+            # Unique constraint violated â€” concurrent upload already inserted this draft key. Skip.
             continue
     return drafts
 
@@ -268,7 +268,7 @@ async def create_excel_drafts(
             drafts.append(draft)
         except IntegrityError:
             db.rollback()
-            # Unique constraint violated — concurrent upload already inserted this draft key. Skip.
+            # Unique constraint violated â€” concurrent upload already inserted this draft key. Skip.
             continue
     return drafts
 
@@ -425,250 +425,6 @@ def delete_activity_record(
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
-@router.get("/drafts", response_model=list[OCRDraftResponse])
-def list_activity_drafts(
-    db: Session = Depends(get_db),
-    user: User = Depends(get_current_user),
-) -> list[OCRDraft]:
-    """List saved intake drafts, newest first.
-
-    Admins see every draft; other users only see their own. Confirmed drafts
-    stay visible with their linked activity_record_id, so the intake page can
-    restore state after navigation.
-    """
-    query = db.query(OCRDraft)
-    if user.role.name != "admin":
-        query = query.filter(OCRDraft.user_id == user.id)
-    return query.order_by(OCRDraft.created_at.desc()).all()
-
-
-@router.post("/ocr", response_model=list[OCRDraftResponse], status_code=status.HTTP_201_CREATED)
-async def create_ocr_draft(
-    file: UploadFile = File(...),
-    facility_id: UUID | None = Form(None),
-    db: Session = Depends(get_db),
-    user: User = Depends(require_role("admin", "facility_manager")),
-) -> list[OCRDraft]:
-    """Stage a scanned/tabular document as reviewable drafts.
-
-    ``facility_id`` is the facility picked in the intake UI. When supplied it
-    wins over whatever facility the document names, and it doubles as the
-    fallback for documents that name none — so a bill without a facility label
-    still stages instead of failing validation.
-    """
-    content = await file.read()
-    try:
-        extracted = extract_activities_from_document(
-            content, file.filename, str(facility_id) if facility_id else None
-        )
-    except (ValueError, ValidationError) as exc:
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
-
-    # Determine effective facility_id for each record and validate access
-    payloads = []
-    for record in extracted:
-        # Priority: form facility_id > document facility_id > user's facility_id
-        record_facility_id = record.get("facility_id")
-        effective_facility_id = facility_id or record_facility_id
-        if effective_facility_id is None:
-            effective_facility_id = user.facility_id
-        if effective_facility_id is None:
-            raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail="missing required facility context: supply facility_id, include it in the document, or attach a facility to the user",
-            )
-        # Enforce scope check on the effective facility
-        if user.role.name != "admin":
-            if user.facility_id is None or user.facility_id != effective_facility_id:
-                raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN,
-                    detail="Not authorized to access this facility",
-                )
-        payloads.append(
-            ActivityRecordCreate.model_validate(
-                {
-                    **record,
-                    "facility_id": str(effective_facility_id),
-                    "source": "ocr",
-                    "confirmed_by_user": False,
-                }
-            )
-        )
-
-    # Idempotent re-uploads: never create a draft for a row already ingested.
-    payloads = _filter_new_drafts(db, payloads, source_type=SOURCE_TYPE_OCR)
-
-    drafts: list[OCRDraft] = []
-    for payload in payloads:
-        draft = build_draft(
-            user_id=user.id,
-            facility_id=payload.facility_id,
-            source_filename=file.filename or "ocr-upload",
-            source_type=SOURCE_TYPE_OCR,
-            period_start=payload.period_start,
-            period_end=payload.period_end,
-            activity_type=payload.activity_type,
-            quantity=payload.quantity,
-            unit=payload.unit,
-        )
-        try:
-            db.add(draft)
-            db.commit()
-            db.refresh(draft)
-            drafts.append(draft)
-        except IntegrityError:
-            db.rollback()
-            # Unique constraint violated — concurrent upload already inserted this draft key. Skip.
-            continue
-    return drafts
-
-
-def _validation_error_message(exc: ValidationError) -> str:
-    return "; ".join(
-        f"{'.'.join(str(part) for part in error['loc'])}: {error['msg']}"
-        for error in exc.errors()
-    )
-
-
-def _filter_new_drafts(
-    db: Session, payloads: list[ActivityRecordCreate], source_type: str
-) -> list[ActivityRecordCreate]:
-    """Drop payloads that already exist as drafts (idempotent re-uploads)."""
-    return [
-        payload
-        for payload in payloads
-        if not draft_exists(
-            db,
-            facility_id=payload.facility_id,
-            period_start=payload.period_start,
-            period_end=payload.period_end,
-            activity_type=payload.activity_type,
-            quantity=payload.quantity,
-            unit=payload.unit,
-            source_type=source_type,
-        )
-    ]
-
-
-@router.post("/excel", response_model=list[OCRDraftResponse], status_code=status.HTTP_201_CREATED)
-async def create_excel_drafts(
-    file: UploadFile = File(...),
-    facility_id: UUID | None = Form(None),
-    db: Session = Depends(get_db),
-    user: User = Depends(require_role("admin", "facility_manager")),
-) -> list[OCRDraft]:
-    """Ingest an electricity workbook as reviewable drafts (source="excel").
-
-    The Excel file has no facility_id, so it is supplied here (or defaults to
-    the user's facility). Every normalized row becomes a draft that follows the
-    exact same confirmation lifecycle as OCR drafts; nothing is auto-confirmed.
-    """
-    content = await file.read()
-    target_facility = facility_id or user.facility_id
-    if target_facility is None:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="missing required facility context: supply facility_id or attach a facility to the user",
-        )
-    # Enforce scope check on the selected facility
-    if facility_id is not None:
-        check_facility_access(user, facility_id)
-    elif user.role.name != "admin" and user.facility_id != target_facility:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not authorized to access this facility",
-        )
-
-    try:
-        parsed = parse_workbook(content, filename=file.filename or "excel-upload")
-    except ValueError as exc:
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
-
-    if not detect_electricity_workbook(parsed):
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail=f"{parsed.filename}: not recognized as an electricity workbook",
-        )
-
-    try:
-        normalized = normalize_workbook(parsed)
-    except ValueError as exc:
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
-
-    raw_lookup = dict(zip(parsed.headers, parsed.raw_headers))
-    rows: list[tuple[object, ActivityRecordCreate, str]] = []
-    errors: list[str] = []
-    for record in normalized:
-        quantity, unit, source_col = select_activity_quantity(record)
-        if quantity is None:
-            errors.append(f"row {record.source_row}: no mapped activity quantity available")
-            continue
-        try:
-            payload = ActivityRecordCreate.model_validate(
-                {
-                    "facility_id": target_facility,
-                    "period_start": datetime.combine(record.period_start, time.min),
-                    "period_end": datetime.combine(record.period_end, time.min),
-                    "activity_type": "electricity",
-                    "quantity": quantity,
-                    "unit": unit,
-                    "source": "excel",
-                    "confirmed_by_user": False,
-                }
-            )
-        except ValidationError as exc:
-            errors.append(f"row {record.source_row}: {_validation_error_message(exc)}")
-            continue
-        rows.append((record, payload, raw_lookup.get(source_col, source_col or "")))
-    if errors:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="; ".join(errors),
-        )
-
-    # Idempotent re-uploads: never create a draft for a row already ingested.
-    new_rows = [
-        row
-        for row in rows
-        if not draft_exists(
-            db,
-            facility_id=row[1].facility_id,
-            period_start=row[1].period_start,
-            period_end=row[1].period_end,
-            activity_type=row[1].activity_type,
-            quantity=row[1].quantity,
-            unit=row[1].unit,
-            source_type=SOURCE_TYPE_EXCEL,
-        )
-    ]
-
-    drafts: list[OCRDraft] = []
-    for record, payload, source_column in new_rows:
-        draft = build_draft(
-            user_id=user.id,
-            facility_id=payload.facility_id,
-            source_filename=file.filename or "excel-upload",
-            source_type=SOURCE_TYPE_EXCEL,
-            source_row=record.source_row,
-            source_column=source_column,
-            period_start=payload.period_start,
-            period_end=payload.period_end,
-            activity_type=payload.activity_type,
-            quantity=payload.quantity,
-            unit=payload.unit,
-        )
-        try:
-            db.add(draft)
-            db.commit()
-            db.refresh(draft)
-            drafts.append(draft)
-        except IntegrityError:
-            db.rollback()
-            # Unique constraint violated — concurrent upload already inserted this draft key. Skip.
-            continue
-    return drafts
-
-
 @router.post(
     "/ocr/{draft_id}/confirm",
     response_model=ActivityRecordResponse,
@@ -743,7 +499,7 @@ def reject_ocr_draft(
 ) -> Response:
     """Discard a draft that should not be ingested.
 
-    Confirmed drafts are immutable — the ledger is append-only for audit, so a
+    Confirmed drafts are immutable â€” the ledger is append-only for audit, so a
     confirmed row is corrected by uploading a replacement, not by deleting it.
     Discarding a draft that adopted a pre-existing unconfirmed record also
     removes that record and its emissions, which is how duplicate rows staged

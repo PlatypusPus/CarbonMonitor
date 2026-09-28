@@ -1,6 +1,6 @@
 import { AlertCircle, CheckCircle, CheckCircle2, FileScan, Loader2, Plus, UploadCloud } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import client from "../api/client";
 import {
@@ -55,6 +55,7 @@ function getFacilityName(facilities, facilityId) {
 }
 
 export default function Intake() {
+  const queryClient = useQueryClient();
   const { user } = useAuth();
   const [file, setFile] = useState(null);
   const [preview, setPreview] = useState(null);
@@ -108,9 +109,9 @@ export default function Intake() {
       });
       return { data, isXlsx, isCsv };
     },
-    onSuccess: async ({ data, isXlsx, isCsv }) => {
+    onSuccess: async ({ data, isCsv }) => {
       const before = new Set(savedDrafts.map((draft) => draft.id));
-      const staged = (isXlsx || isCsv) ? data.row_count : (data?.length ?? 0);
+      const staged = isCsv ? data.row_count : data.length;
       const fresh = await draftsQuery.refetch();
       const created = (fresh.data ?? []).filter((draft) => !before.has(draft.id));
       setCurrentDrafts(created);
@@ -144,7 +145,7 @@ export default function Intake() {
       .catch((err) => {
         if (cancelled) return;
         setPreview(null);
-        setPreviewError(err.response?.data?.detail || err.message || "Could not preview this file.");
+        setPreviewError(messageFromError(err, "Could not preview this file."));
       });
     return () => {
       cancelled = true;
@@ -232,6 +233,9 @@ export default function Intake() {
       );
       setSelectedId(next?.id ?? null);
       await draftsQuery.refetch();
+      await Promise.all(["summary", "latest", "timeseries"].map((key) =>
+        queryClient.invalidateQueries({ queryKey: [key] }),
+      ));
     } catch (err) {
       setError(messageFromError(err, "Failed to confirm draft."));
     }
@@ -496,7 +500,9 @@ export default function Intake() {
             </button>
           </div>
 
-          {visibleDrafts.length === 0 ? (
+          {draftsQuery.isError ? (
+            <p role="alert" className="mt-3 text-sm text-rose">Failed to load saved drafts. <button onClick={() => draftsQuery.refetch()} className="underline">Retry</button></p>
+          ) : visibleDrafts.length === 0 ? (
             <div className="mt-3 grid h-[240px] place-items-center rounded-lg border border-dashed border-line text-sm text-muted">
               {view === "saved"
                 ? draftsQuery.isLoading

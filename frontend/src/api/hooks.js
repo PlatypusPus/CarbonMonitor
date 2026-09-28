@@ -23,7 +23,7 @@ export const useFacilities = () =>
   useQuery({ queryKey: ["facilities"], queryFn: get("/facilities") });
 
 export const useActivityDrafts = () =>
-  useQuery({ queryKey: ["activity-drafts"], queryFn: get("/activity") });
+  useQuery({ queryKey: ["activity-drafts"], queryFn: get("/activity/drafts") });
 
 export const useCreateFacility = () =>
   useMutation({
