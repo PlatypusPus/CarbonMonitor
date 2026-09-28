@@ -3,7 +3,7 @@ import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YA
 import { useAnomalies, useLatest, useSummary, useTimeseries } from "../api/hooks";
 
 const fmt = (n) => (typeof n === "number" ? n.toLocaleString(undefined, { maximumFractionDigits: 1 }) : "-");
-const time = (ts) => new Date(ts).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+const time = (ts) => new Date(ts).toLocaleString([], { year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
 
 function LivePill() {
   return (
@@ -119,6 +119,10 @@ export default function Dashboard() {
           accent="peach"
         />
       </div>
+
+      {[summary, anomalies, series, feed].some((query) => query.isError) && (
+        <p role="alert" className="text-sm text-rose">Some emissions data could not be loaded. <button className="underline" onClick={() => [summary, anomalies, series, feed].forEach((query) => query.refetch())}>Retry</button></p>
+      )}
 
       <div className="grid gap-4 lg:grid-cols-3">
         <div className="lg:col-span-2">

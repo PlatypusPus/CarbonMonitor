@@ -24,7 +24,7 @@ function ScoreBadge({ score }) {
 }
 
 export default function Anomalies() {
-  const { data, isLoading } = useAnomalies({ limit: 100 });
+  const { data, isLoading, isError, refetch } = useAnomalies({ limit: 100 });
   const rows = data ?? [];
 
   return (
@@ -37,7 +37,9 @@ export default function Anomalies() {
       </div>
 
       <div className="overflow-hidden rounded-card border border-line bg-surface">
-        {isLoading ? (
+        {isError ? (
+          <p role="alert" className="p-5 text-sm text-rose">Failed to load anomalies. <button className="underline" onClick={() => refetch()}>Retry</button></p>
+        ) : isLoading ? (
           <div className="h-48 animate-pulse bg-canvas" />
         ) : rows.length === 0 ? (
           <div className="grid h-48 place-items-center text-sm text-muted">

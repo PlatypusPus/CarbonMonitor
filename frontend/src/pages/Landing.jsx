@@ -6,7 +6,7 @@ import facilityHero from "../assets/carbontrace-facility-hero.png";
 const flow = [
   { icon: Upload, title: "Bring your activity data", text: "Upload electricity, fuel, and LPG records from CSV or Excel." },
   { icon: BarChart3, title: "Calculate and monitor", text: "Convert activity into Scope 1 and 2 CO2e with traceable factors." },
-  { icon: FileCheck2, title: "Report with confidence", text: "Investigate anomalies and export a BRSR-ready ESG report." },
+  { icon: FileCheck2, title: "Report with confidence", text: "Investigate anomalies and export an emissions summary report." },
 ];
 
 export default function Landing() {

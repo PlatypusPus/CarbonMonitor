@@ -29,7 +29,7 @@ export default function ESGReport() {
     <div className="flex flex-col gap-5">
       <div>
         <h1 className="text-2xl font-bold text-ink">ESG Report</h1>
-        <p className="text-sm text-muted">Generate and download the compliance-ready PDF</p>
+        <p className="text-sm text-muted">Generate and download an emissions summary PDF</p>
       </div>
 
       <div className="flex max-w-md flex-col items-center gap-6 rounded-card border border-line bg-surface p-8 text-center">
@@ -39,7 +39,7 @@ export default function ESGReport() {
         <div>
           <p className="font-semibold text-ink">CarbonTrace ESG Report</p>
           <p className="mt-1 text-sm text-muted">
-            Includes all facilities, emission summaries, anomaly flags, and compliance metrics.
+            Includes emission reading counts, averages, latest values, and detected anomalies across facilities.
           </p>
         </div>
         {error && <p className="text-sm text-rose">{error}</p>}

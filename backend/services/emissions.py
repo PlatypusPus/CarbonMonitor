@@ -34,7 +34,7 @@ def query_latest(
         q = q.filter(ActivityRecord.source == source)
     if facility:
         q = q.filter(Facility.name == facility)
-    q = q.order_by(CalculatedEmission.calculated_at.desc()).limit(limit)
+    q = q.order_by(ActivityRecord.period_start.desc(), CalculatedEmission.calculated_at.desc()).limit(limit)
     return [
         {
             "timestamp": ar.period_start,
@@ -182,12 +182,12 @@ def query_summary(db: Session) -> list[dict[str, Any]]:
         db.query(
             ActivityRecord.activity_type.label("metric"),
             CalculatedEmission.co2e_kg.label("latest_value"),
-            CalculatedEmission.calculated_at.label("latest_timestamp"),
+            ActivityRecord.period_start.label("latest_timestamp"),
         )
         .join(ActivityRecord, CalculatedEmission.activity_record_id == ActivityRecord.id)
         .filter(CONFIRMED_ONLY)
         .distinct(ActivityRecord.activity_type)
-        .order_by(ActivityRecord.activity_type, CalculatedEmission.calculated_at.desc())
+        .order_by(ActivityRecord.activity_type, ActivityRecord.period_start.desc(), CalculatedEmission.calculated_at.desc())
         .all()
     )
     latest_map = {r.metric: r for r in latest_rows}

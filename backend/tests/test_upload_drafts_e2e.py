@@ -490,3 +490,30 @@ def test_xlsx_upload_also_stages_for_review(
     with SessionLocal() as db:
         assert db.query(ActivityRecord).count() == before_records, "xlsx wrote to the ledger"
     assert len(_drafts_for("workbook.xlsx")) == staged_count
+
+
+def test_backfilled_activity_does_not_replace_latest_reading(client, e2e_setup):
+    headers, facility_id = e2e_setup
+    for year, quantity in [(2026, 100), (2025, 50)]:
+        response = client.post("/api/activity", headers=headers, json={
+            "facility_id": str(facility_id), "activity_type": "petrol",
+            "quantity": quantity, "unit": "litre", "source": "manual",
+            "period_start": f"{year}-01-01T00:00:00Z",
+            "period_end": f"{year}-02-01T00:00:00Z",
+        })
+        assert response.status_code == 201, response.text
+        for _ in range(2):
+            retry = client.post(f"/api/calculations/{response.json()['id']}/calculate", headers=headers)
+            assert retry.status_code == 200, retry.text
+    summary = client.get("/api/emissions/summary", headers=headers)
+    assert summary.status_code == 200
+    petrol = next(row for row in summary.json() if row["metric"] == "petrol")
+    assert petrol["latest_value"] == pytest.approx(231)
+    assert petrol["count"] == 2
+    latest = client.get("/api/emissions/latest", headers=headers, params={"metric": "petrol"})
+    assert latest.json()[0]["value"] == pytest.approx(231)
+    for interval in ["15m", "1h", "6h", "1d"]:
+        series = client.get("/api/emissions/timeseries", headers=headers,
+                            params={"metric": "petrol", "interval": interval})
+        assert series.status_code == 200, series.text
+        assert sum(row["value"] for row in series.json()) == pytest.approx(346.5)

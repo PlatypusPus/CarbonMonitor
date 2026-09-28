@@ -15,7 +15,7 @@ const INTERVALS = [
 const fmt = (n, d = 1) =>
   typeof n === "number" ? n.toLocaleString(undefined, { maximumFractionDigits: d }) : "-";
 const time = (ts) =>
-  new Date(ts).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  new Date(ts).toLocaleString([], { year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
 
 export default function Trends() {
   const navigate = useNavigate();
@@ -81,7 +81,9 @@ export default function Trends() {
           <span className="text-sm font-semibold text-ink">{effectiveMetric}</span>
           <span className="font-mono text-xs text-muted">{unitLabel || "kg CO₂e"}</span>
         </div>
-        {series.isLoading ? (
+        {series.isError || summary.isError ? (
+          <p role="alert" className="text-sm text-rose">Failed to load emissions. <button className="underline" onClick={() => { summary.refetch(); series.refetch(); }}>Retry</button></p>
+        ) : series.isLoading ? (
           <div className="h-64 animate-pulse rounded-lg bg-canvas" />
         ) : points.length === 0 ? (
           <div className="grid h-64 place-items-center rounded-lg border border-dashed border-line text-sm text-muted">
