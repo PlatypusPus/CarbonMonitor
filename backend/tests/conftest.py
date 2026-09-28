@@ -11,10 +11,16 @@ drafts) into real data.
 import os
 from pathlib import Path
 import sys
+from sqlalchemy.engine import make_url
 
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-TEST_DATABASE_URL = "postgresql+psycopg://carbontrace:carbontrace@localhost:5432/carbontrace_e2e"
+TEST_DATABASE_URL = os.environ.get(
+    "TEST_DATABASE_URL",
+    "postgresql+psycopg://carbontrace:carbontrace@localhost:5432/carbontrace_e2e",
+)
+if not (make_url(TEST_DATABASE_URL).database or "").endswith("_e2e"):
+    raise RuntimeError("Tests require a dedicated database whose name ends in _e2e")
 os.environ["DATABASE_URL"] = TEST_DATABASE_URL

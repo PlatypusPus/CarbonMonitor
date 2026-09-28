@@ -30,7 +30,7 @@ from uuid import UUID
 import pytest
 from workbook_fixture import electricity_bytes
 
-TEST_DATABASE_URL = "postgresql+psycopg://carbontrace:carbontrace@localhost:5432/carbontrace_e2e"
+TEST_DATABASE_URL = os.environ["DATABASE_URL"]
 
 ADMIN_EMAIL = "upload-e2e@example.com"
 ADMIN_PASSWORD = "e2e-pass"
@@ -40,13 +40,7 @@ def _e2e_db_available() -> bool:
     try:
         import psycopg
 
-        with psycopg.connect(
-            host="localhost",
-            port=5432,
-            user="carbontrace",
-            password="carbontrace",
-            dbname="carbontrace_e2e",
-        ) as conn:
+        with psycopg.connect(TEST_DATABASE_URL.replace("postgresql+psycopg:", "postgresql:"), connect_timeout=2) as conn:
             conn.execute("SELECT 1")
         return True
     except Exception:
