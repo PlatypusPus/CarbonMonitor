@@ -1,6 +1,6 @@
 """Tests for the Excel electricity ingestion + normalization layer.
 
-Uses the real ``tests/fixtures/electricity.xlsx`` plus synthetic
+Uses the synthetic electricity workbook plus synthetic
 workbooks for edge cases. Existing OCR behavior is covered by ``test_ocr.py``;
 here we also assert the Excel layer does not change how OCR treats the same
 workbook bytes.
@@ -8,7 +8,6 @@ workbook bytes.
 
 from datetime import date, datetime, time
 from io import BytesIO
-from pathlib import Path
 from uuid import UUID
 
 import pytest
@@ -24,14 +23,13 @@ from services.excel.normalizer import (
 from services.excel.parser import ParsedExcelRow, ParsedWorkbook, parse_workbook
 from services.ocr import extract_activities_from_document
 
-_TEST_DIR = Path(__file__).resolve().parent
-ELECTRICITY_XLSX = _TEST_DIR / "fixtures" / "electricity.xlsx"
+from workbook_fixture import electricity_bytes
 
 FIXTURE_FACILITY = UUID("11111111-1111-4111-8111-111111111111")
 
 
 def _electricity_bytes() -> bytes:
-    return ELECTRICITY_XLSX.read_bytes()
+    return electricity_bytes()
 
 
 def _build_workbook(rows: list[list]) -> bytes:
@@ -61,11 +59,7 @@ def _row(*, row_number: int, values: list) -> ParsedExcelRow:
 # --- Parser / real fixture -------------------------------------------------
 
 
-def test_real_fixture_exists() -> None:
-    assert ELECTRICITY_XLSX.exists(), "repo-root electricity.xlsx fixture missing"
-
-
-def test_real_fixture_parses_with_provenance() -> None:
+def test_synthetic_workbook_parses_with_provenance() -> None:
     parsed = parse_workbook(_electricity_bytes(), filename="electricity.xlsx")
 
     assert parsed.sheet_name == "MescomBill "
@@ -77,7 +71,7 @@ def test_real_fixture_parses_with_provenance() -> None:
     assert parsed.rows, "expected data rows"
 
 
-def test_real_fixture_normalizes_rows() -> None:
+def test_synthetic_workbook_normalizes_rows() -> None:
     records = normalize_workbook(parse_workbook(_electricity_bytes(), filename="electricity.xlsx"))
 
     assert len(records) == 14
@@ -97,7 +91,7 @@ def test_real_fixture_normalizes_rows() -> None:
     assert first.net_grid_kwh == pytest.approx(first.solar_generation_kwh - first.grid_export_kwh)
 
 
-def test_real_fixture_preserves_source_columns_and_raw_values() -> None:
+def test_synthetic_workbook_preserves_source_columns_and_raw_values() -> None:
     first = normalize_workbook(parse_workbook(_electricity_bytes(), filename="electricity.xlsx"))[0]
 
     assert first.source_columns["mescom units"] == "grid_import_kwh"
@@ -169,7 +163,7 @@ def test_numeric_values_normalized() -> None:
             values=[
                 datetime(2025, 6, 1),
                 "69,100.00",
-                "₹19,359",
+                "â‚¹19,359",
                 " 210 ",
                 "19,149.0",
                 "88,249",

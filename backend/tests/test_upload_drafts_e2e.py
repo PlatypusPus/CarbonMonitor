@@ -25,15 +25,12 @@ from __future__ import annotations
 
 import os
 from datetime import datetime
-from pathlib import Path
 from uuid import UUID
 
 import pytest
+from workbook_fixture import electricity_bytes
 
 TEST_DATABASE_URL = "postgresql+psycopg://carbontrace:carbontrace@localhost:5432/carbontrace_e2e"
-
-_TEST_DIR = Path(__file__).resolve().parent
-ELECTRICITY_XLSX = _TEST_DIR / "fixtures" / "electricity.xlsx"
 
 ADMIN_EMAIL = "upload-e2e@example.com"
 ADMIN_PASSWORD = "e2e-pass"
@@ -487,7 +484,7 @@ def test_xlsx_upload_also_stages_for_review(
         files={
             "file": (
                 "workbook.xlsx",
-                ELECTRICITY_XLSX.read_bytes(),
+                electricity_bytes(),
                 "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             )
         },

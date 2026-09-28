@@ -1,7 +1,7 @@
 """End-to-end test of the complete Excel ingestion flow against the real API.
 
 This test exercises the actual FastAPI endpoints against a real PostgreSQL
-database (``carbontrace_e2e``) using ``tests/fixtures/electricity.xlsx`` as the
+database (``carbontrace_e2e``) using a synthetic electricity workbook as the
 uploaded file. It covers the full lifecycle:
 
     Excel file -> POST /api/activity/excel -> normalized records -> drafts
@@ -21,15 +21,12 @@ from __future__ import annotations
 import inspect
 import os
 from datetime import date, datetime, time
-from pathlib import Path
 from uuid import UUID
 
 import pytest
+from workbook_fixture import electricity_bytes
 
 TEST_DATABASE_URL = "postgresql+psycopg://carbontrace:carbontrace@localhost:5432/carbontrace_e2e"
-
-_TEST_DIR = Path(__file__).resolve().parent
-ELECTRICITY_XLSX = _TEST_DIR / "fixtures" / "electricity.xlsx"
 
 ADMIN_EMAIL = "admin@example.com"
 ADMIN_PASSWORD = "e2e-pass"
@@ -158,9 +155,9 @@ def e2e_setup(client: TestClient) -> tuple[str, UUID]:
 
 def test_excel_ingestion_end_to_end(client: TestClient, e2e_setup: tuple[str, UUID]) -> None:
     headers, facility_id = e2e_setup
-    xlsx_bytes = ELECTRICITY_XLSX.read_bytes()
+    xlsx_bytes = electricity_bytes()
 
-    # --- 1. Accept the real electricity.xlsx with an externally supplied facility ---
+    # --- 1. Accept the synthetic electricity.xlsx with an externally supplied facility ---
     response = client.post(
         "/api/activity/excel",
         headers=headers,
@@ -200,7 +197,7 @@ def test_excel_ingestion_end_to_end(client: TestClient, e2e_setup: tuple[str, UU
     parsed = parse_workbook(xlsx_bytes, filename="electricity.xlsx")
     assert detect_electricity_workbook(parsed)  # detected as electricity data
 
-    # --- 2. The first row is the actual June 2025 record (Excel row 2) ---
+    # --- 2. The first row is the synthetic June 2025 record (Excel row 2) ---
     draft = drafts[0]
     assert draft["source_type"] == "excel"  # source="excel"
     assert draft["source_filename"] == "electricity.xlsx"  # provenance
@@ -283,7 +280,7 @@ def test_excel_ingestion_end_to_end(client: TestClient, e2e_setup: tuple[str, UU
         assert confirmed.confirmed_at is not None
         assert confirmed.activity_record_id == _UUID(record_id)
 
-    # --- 6. Print one complete chain for a real Excel row (row 2) ---
+    # --- 6. Print one complete chain for a synthetic Excel row (row 2) ---
     print("\n===== COMPLETE EXCEL INGESTION CHAIN (row 2) =====")
     print("EXCEL ROW:")
     for key, value in first.raw_values.items():
