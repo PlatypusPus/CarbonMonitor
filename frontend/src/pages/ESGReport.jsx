@@ -39,7 +39,8 @@ export default function ESGReport() {
         <div>
           <p className="font-semibold text-ink">CarbonTrace ESG Report</p>
           <p className="mt-1 text-sm text-muted">
-            Includes emission reading counts, averages, latest values, and detected anomalies across facilities.
+            Includes Scope 1 and Scope 2 totals, facility comparisons, reporting periods,
+            activity calculations, and data quality notes. Pending drafts are excluded.
           </p>
         </div>
         {error && <p className="text-sm text-rose">{error}</p>}
