@@ -7,6 +7,7 @@ from datetime import datetime
 from schemas.activity_record import ActivityValues
 from services.calculation import SCOPE_MAP
 from services.factors import resolve_factor
+from models.emission_factor import EmissionFactor
 
 
 def run_scenario(
@@ -14,7 +15,8 @@ def run_scenario(
     baseline_activity: dict[str, Any], 
     modified_inputs: dict[str, Any], 
     region_code: str | None, 
-    period_end: datetime
+    period_end: datetime,
+    *, factor: EmissionFactor | None = None,
 ) -> dict[str, Any]:
     allowed_keys = {"quantity", "activity_type", "unit"}
     for k in modified_inputs:
@@ -31,7 +33,7 @@ def run_scenario(
         raise ValueError("activity_type is missing")
         
     activity = ActivityValues.model_validate(hypothetical)
-    factor = resolve_factor(db, act_type, period_end, region_code)
+    factor = factor or resolve_factor(db, act_type, period_end, region_code)
     if not factor:
         raise ValueError(f"No emission factor found for activity type: {act_type}")
         

@@ -14,6 +14,10 @@ The resolver prefers a valid regional factor over a global factor, using the act
 
 Only confirmed records with calculations contribute to totals. Totals are summed before display rounding. The report uses all available periods and is a presentation summary, not a complete BRSR submission or independently verified disclosure.
 
-Anomaly detection requires at least 20 readings in each facility and activity group and an explicit API trigger. With only 4 or 5 monthly records per demo facility, the absence of flags does not demonstrate normality.
+Anomaly detection requires at least 20 readings in each facility and activity group and an explicit API trigger. The college dataset has 14 monthly records, so the absence of flags does not demonstrate normality.
+
+## What-if scenarios
+
+Open **What-if Scenarios**, select a confirmed monthly record, and enter a proposed consumption or choose a reduction preset. The comparison uses that record's applied emission factor and shows the projected emissions and change. Scenarios are hypothetical previews: they do not save activity, change the college data, or contribute to report totals.
 
 Authentication supports login, refresh, and logout. Fine-grained reporting authorization and legacy-database migration validation remain outside the presentation scope.
