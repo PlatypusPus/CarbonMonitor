@@ -10,6 +10,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from models.ocr_draft import OCRDraft
+from schemas.activity_record import ACTIVITY_UNITS, ActivityValues
 from services.drafts import SOURCE_TYPE_UPLOAD, build_draft, draft_exists
 
 REQUIRED_COLUMNS = {"timestamp", "metric", "value"}
@@ -27,6 +28,8 @@ def _parse_timestamp(value: str | None) -> str:
 
 def parse_emissions_csv(content: bytes) -> list[dict[str, Any]]:
     reader = csv.DictReader(io.StringIO(content.decode("utf-8-sig")))
+    if reader.fieldnames:
+        reader.fieldnames = [header.strip() for header in reader.fieldnames]
     headers = {header.strip() for header in (reader.fieldnames or [])}
     missing = REQUIRED_COLUMNS - headers
     if missing:
@@ -43,6 +46,11 @@ def parse_emissions_csv(content: bytes) -> list[dict[str, Any]]:
             raise ValueError(f"row {line_no}: 'metric' is required")
         if metric not in ALLOWED_METRICS:
             raise ValueError(f"row {line_no}: unknown metric '{metric}' — expected one of {', '.join(sorted(ALLOWED_METRICS))}")
+        unit = (raw.get("unit") or "").strip() or ACTIVITY_UNITS[metric]
+        try:
+            ActivityValues(activity_type=metric, quantity=value, unit=unit)
+        except ValueError as exc:
+            raise ValueError(f"row {line_no}: {exc}") from exc
         try:
             timestamp = _parse_timestamp(raw.get("timestamp"))
         except ValueError as exc:
@@ -52,7 +60,7 @@ def parse_emissions_csv(content: bytes) -> list[dict[str, Any]]:
                 "timestamp": timestamp,
                 "metric": metric,
                 "value": value,
-                "unit": (raw.get("unit") or "").strip() or None,
+                "unit": unit,
                 "facility_name": (raw.get("facility_name") or "").strip() or None,
                 "source": "upload",
             }
@@ -122,7 +130,7 @@ def stage_upload_drafts(
         period_end = next_period_end(period_start)
         metric = row["metric"]
         quantity = row["value"]
-        unit = row.get("unit") or "kWh"
+        unit = row.get("unit") or ACTIVITY_UNITS[metric]
 
         # Pre-check avoids unnecessary INSERT attempts for the common case
         if draft_exists(

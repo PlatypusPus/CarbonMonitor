@@ -47,7 +47,7 @@ def resolve_factor(
                 EmissionFactor.valid_to.is_(None),
             )
         )
-        .order_by(EmissionFactor.region.is_(None))
+        .order_by(EmissionFactor.region.is_(None), EmissionFactor.valid_from.desc(), EmissionFactor.id)
         .limit(1)
     )
     return db.execute(stmt).scalar_one_or_none()

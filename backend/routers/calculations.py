@@ -4,7 +4,7 @@ import uuid
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import select, or_
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from database import get_db
@@ -12,9 +12,9 @@ from dependencies import get_current_user, check_facility_access
 from models.user import User
 from models.activity_record import ActivityRecord
 from models.calculated_emission import CalculatedEmission
-from models.emission_factor import EmissionFactor
 from schemas.calculated_emission import CalculatedEmissionResponse
 from services.calculation import calculate_emissions
+from services.factors import resolve_factor
 
 router = APIRouter()
 
@@ -23,23 +23,26 @@ router = APIRouter()
 def calculate_record(
     activity_record_id: uuid.UUID, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)
 ) -> Any:
-    record = db.get(ActivityRecord, activity_record_id)
+    record = db.execute(
+        select(ActivityRecord).where(ActivityRecord.id == activity_record_id).with_for_update()
+    ).scalar_one_or_none()
     if not record:
         raise HTTPException(status_code=404, detail="ActivityRecord not found")
     check_facility_access(current_user, record.facility_id)
+    if not record.confirmed_by_user:
+        raise HTTPException(status_code=400, detail="Confirm the activity before calculating emissions")
+    existing = db.execute(select(CalculatedEmission).where(
+        CalculatedEmission.activity_record_id == record.id
+    )).scalar_one_or_none()
+    if existing is not None:
+        return existing
     
     from models.facility import Facility
     facility = db.get(Facility, record.facility_id)
     if not facility:
         raise HTTPException(status_code=404, detail="Facility not found")
 
-    stmt = select(EmissionFactor).where(
-        EmissionFactor.activity_type == record.activity_type,
-        or_(EmissionFactor.region == facility.region_code, EmissionFactor.region.is_(None)),
-        or_(EmissionFactor.valid_from <= record.period_end, EmissionFactor.valid_from.is_(None)),
-        or_(EmissionFactor.valid_to >= record.period_end, EmissionFactor.valid_to.is_(None))
-    ).limit(1)
-    factor = db.execute(stmt).scalar_one_or_none()
+    factor = resolve_factor(db, record.activity_type, record.period_end, facility.region_code)
     if not factor:
         raise HTTPException(
             status_code=400, 

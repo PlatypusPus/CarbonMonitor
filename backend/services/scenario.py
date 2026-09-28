@@ -3,10 +3,10 @@
 
 from typing import Any
 from sqlalchemy.orm import Session
-from sqlalchemy import select, or_
 from datetime import datetime
-from models.emission_factor import EmissionFactor
+from schemas.activity_record import ActivityValues
 from services.calculation import SCOPE_MAP
+from services.factors import resolve_factor
 
 
 def run_scenario(
@@ -30,18 +30,13 @@ def run_scenario(
     if not act_type:
         raise ValueError("activity_type is missing")
         
-    stmt = select(EmissionFactor).where(
-        EmissionFactor.activity_type == act_type,
-        or_(EmissionFactor.region == region_code, EmissionFactor.region.is_(None)),
-        or_(EmissionFactor.valid_from <= period_end, EmissionFactor.valid_from.is_(None)),
-        or_(EmissionFactor.valid_to >= period_end, EmissionFactor.valid_to.is_(None))
-    ).limit(1)
-    factor = db.execute(stmt).scalar_one_or_none()
+    activity = ActivityValues.model_validate(hypothetical)
+    factor = resolve_factor(db, act_type, period_end, region_code)
     if not factor:
         raise ValueError(f"No emission factor found for activity type: {act_type}")
         
     scope = SCOPE_MAP.get(act_type, 1)
-    quantity = float(hypothetical.get("quantity", 0))
+    quantity = activity.quantity
     co2e_kg = quantity * factor.factor_value
     
     return {

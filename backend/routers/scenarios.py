@@ -45,7 +45,7 @@ def run_scenario_endpoint(scenario_in: ScenarioCreate, db: Session = Depends(get
     baseline_activity = {}
     if record:
         baseline_activity = {
-            "id": record.id,
+            "id": str(record.id),
             "activity_type": record.activity_type,
             "quantity": record.quantity,
             "unit": record.unit,

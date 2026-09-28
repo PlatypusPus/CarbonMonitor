@@ -1,22 +1,33 @@
 """Request/response schemas for ActivityRecord."""
 
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 ActivityType = Literal["electricity", "diesel", "petrol", "lpg"]
 ActivitySource = Literal["manual", "csv", "ocr", "excel"]
+ACTIVITY_UNITS = {"electricity": "kWh", "diesel": "litre", "petrol": "litre", "lpg": "kg"}
 
 
-class ActivityRecordCreate(BaseModel):
+class ActivityValues(BaseModel):
+    activity_type: ActivityType
+    quantity: float = Field(ge=0, allow_inf_nan=False)
+    unit: str
+
+    @model_validator(mode="after")
+    def validate_units(self) -> "ActivityValues":
+        expected = ACTIVITY_UNITS[self.activity_type]
+        if self.unit != expected:
+            raise ValueError(f"Invalid unit for {self.activity_type}. Expected {expected}, got {self.unit}")
+        return self
+
+
+class ActivityRecordCreate(ActivityValues):
     facility_id: uuid.UUID
     period_start: datetime
     period_end: datetime
-    activity_type: ActivityType
-    quantity: float
-    unit: str
     source: ActivitySource
     confirmed_by_user: bool = False
 
@@ -27,16 +38,13 @@ class ActivityRecordCreate(BaseModel):
         return self
 
     @model_validator(mode="after")
-    def validate_units(self) -> "ActivityRecordCreate":
-        valid_units = {
-            "electricity": "kWh",
-            "diesel": "litre",
-            "petrol": "litre",
-            "lpg": "kg"
-        }
-        expected = valid_units.get(self.activity_type)
-        if expected and self.unit != expected:
-            raise ValueError(f"Invalid unit for {self.activity_type}. Expected {expected}, got {self.unit}")
+    def validate_period(self) -> "ActivityRecordCreate":
+        start = self.period_start
+        end = self.period_end
+        if (start.tzinfo is None) != (end.tzinfo is None):
+            raise ValueError("Period dates must use consistent timezone information")
+        if end.replace(tzinfo=end.tzinfo or timezone.utc) <= start.replace(tzinfo=start.tzinfo or timezone.utc):
+            raise ValueError("period_end must be after period_start")
         return self
 
 
