@@ -38,6 +38,8 @@ def test_report_totals_exclusions_and_safe_text():
         pdf = PdfReader(BytesIO(generate_esg_pdf(db)))
         text = "\n".join(page.extract_text() for page in pdf.pages)
         assert "82.00 kg CO2e (0.082 t CO2e)" in text
+        assert "Not provided" in text
+        assert "Missing data is not a measured zero" in text
         assert "1 records across 1 facilities" in text
         assert "1 confirmed records without calculations" in text
         assert "<North> & West, wing" in text

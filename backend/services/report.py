@@ -82,9 +82,9 @@ def generate_esg_pdf(db: Session) -> bytes:
     total = sum(scopes.values())
     elements.append(_table([
         ['Measure', 'Result'],
-        ['Total emissions', f'{total:,.2f} kg CO2e ({total/1000:,.3f} t CO2e)'],
-        ['Scope 1: direct fuel emissions', f'{scopes[1]:,.2f} kg CO2e'],
-        ['Scope 2: purchased electricity', f'{scopes[2]:,.2f} kg CO2e'],
+        ['Total recorded emissions', f'{total:,.2f} kg CO2e ({total/1000:,.3f} t CO2e)'],
+        ['Scope 1: direct fuel emissions', f'{scopes[1]:,.2f} kg CO2e' if any(c.scope == 1 for _, c, _, _ in rows) else 'Not provided'],
+        ['Scope 2: purchased electricity', f'{scopes[2]:,.2f} kg CO2e' if any(c.scope == 2 for _, c, _, _ in rows) else 'Not provided'],
         ['Coverage', f'{len(rows)} records across {len({f.id for _, _, f, _ in rows})} facilities'],
     ], [doc.width*0.5, doc.width*0.5]))
     section('2. Facility comparison')
@@ -111,6 +111,13 @@ def generate_esg_pdf(db: Session) -> bytes:
     if rows:
         elements.append(_table(detail, [doc.width*x for x in (.34, .15, .19, .12, .20)]))
     section('4. Methodology and data quality')
+    sources = db.scalars(select(OCRDraft.source_filename).where(
+        OCRDraft.activity_record_id.in_([activity.id for activity, _, _, _ in rows]),
+        OCRDraft.status == 'confirmed',
+    ).distinct()).all()
+    if sources:
+        paragraph('Source workbooks or uploads: ' + ', '.join(sorted(sources)) + '.')
+    paragraph('A scope marked Not provided has no calculated records. Missing data is not a measured zero; total recorded emissions excludes unreported activity.')
     paragraph('Emissions (kg CO2e) = activity quantity x the recorded emission factor. Tonnes CO2e = kg CO2e / 1,000. Totals use stored values before display rounding.')
     factors = {factor.id: factor for _, _, _, factor in rows}
     for factor in factors.values():

@@ -22,7 +22,7 @@ Open http://localhost. Create your first account using [Setup and login](docs/se
 ## Documentation
 
 - [Setup, login, and local development](docs/setup.md)
-- [Three-facility demo and spreadsheet imports](docs/demo.md)
+- [College dataset and spreadsheet imports](docs/demo.md)
 - [Calculations, reporting, and limitations](docs/reporting.md)
 - [Architecture and verification](docs/development.md)
 

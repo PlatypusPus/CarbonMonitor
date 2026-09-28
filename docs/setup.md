@@ -26,7 +26,7 @@ Restart the service after changing environment variables. Rebuild Docker images 
 
 ## Prepared local presentation database
 
-The prepared demo uses database `carbontrace_demo` on `127.0.0.1:55439`, separate from Docker and the disposable `_e2e` database. It contains 14 confirmed records across Demo Facility 1, 2, and 3. Login credentials were supplied in the project chat and are not committed.
+The prepared demo uses database `carbontrace_demo` on `127.0.0.1:55439`, separate from Docker and the disposable `_e2e` database. It contains 14 confirmed records from the original electricity.xlsx under College Campus. The former demo partitions have been removed. Login credentials were supplied in the project chat and are not committed.
 
 If the local services have stopped, run from the repository root in PowerShell:
 
