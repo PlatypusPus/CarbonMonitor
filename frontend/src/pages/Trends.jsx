@@ -91,7 +91,7 @@ export default function Trends() {
           </div>
         ) : (
           <ResponsiveContainer width="100%" height={256}>
-            <AreaChart data={points} margin={{ top: 4, right: 8, left: -16, bottom: 0 }}>
+            <AreaChart data={points} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
               <defs>
                 <linearGradient id="trend" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="0%" stopColor="#2E9E6B" stopOpacity={0.22} />
@@ -109,7 +109,7 @@ export default function Trends() {
                 tick={{ fontSize: 11, fill: "#A8A89F" }}
                 tickLine={false}
                 axisLine={false}
-                width={44}
+                width={64}
               />
               <Tooltip />
               <Area
