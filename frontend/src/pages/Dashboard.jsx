@@ -3,13 +3,13 @@ import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YA
 import { useAnomalies, useLatest, useSummary, useTimeseries } from "../api/hooks";
 
 const fmt = (n) => (typeof n === "number" ? n.toLocaleString(undefined, { maximumFractionDigits: 1 }) : "-");
-const time = (ts) => new Date(ts).toLocaleString([], { year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+const time = (ts) => new Date(ts).toLocaleDateString([], { year: "numeric", month: "short", timeZone: "UTC" });
 
 function LivePill() {
   return (
     <span className="inline-flex items-center gap-2 rounded-pill border border-mint bg-[#E8F3EC] px-3 py-1 text-xs font-semibold text-leaf">
       <span className="h-1.5 w-1.5 animate-pulse-dot rounded-full bg-leaf" />
-      LIVE
+      CONFIRMED DATA
     </span>
   );
 }
@@ -66,7 +66,7 @@ function SensorFeed({ feed }) {
   const rows = feed.data ?? [];
   return (
     <div className="rounded-card border border-line bg-surface p-5">
-      <div className="mb-3 text-sm font-semibold text-ink">Sensor feed</div>
+      <div className="mb-3 text-sm font-semibold text-ink">Recent activity records</div>
       <div className="flex max-h-72 flex-col gap-1 overflow-auto">
         {rows.length === 0 && <div className="text-sm text-muted">No recent readings.</div>}
         {rows.map((r, i) => (
@@ -93,7 +93,7 @@ export default function Dashboard() {
   const anomalies = useAnomalies({ limit: 200 });
   // metric matches ActivityRecord.activity_type (electricity/diesel/...)
   const defaultMetric = summary.data?.[0]?.metric ?? "electricity";
-  const series = useTimeseries({ metric: defaultMetric, interval: "1h" });
+  const series = useTimeseries({ metric: defaultMetric, interval: "1mo" });
   const feed = useLatest({ limit: 12 });
 
   const metrics = (summary.data ?? []).slice(0, 3);
@@ -102,20 +102,22 @@ export default function Dashboard() {
     <div className="flex flex-col gap-5">
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-ink">Live Monitor</h1>
-          <p className="text-sm text-muted">Real-time facility emissions overview</p>
+          <h1 className="text-2xl font-bold text-ink">Emissions overview</h1>
+          <p className="text-sm text-muted">Confirmed activity records and monthly emissions</p>
         </div>
         <LivePill />
       </div>
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <StatCard label={`Total ${defaultMetric} emissions`} value={series.data ? fmt(series.data.reduce((total, row) => total + (row.value ?? 0), 0)) : "-"} unit="kg CO2e" />
         {metrics.map((m) => (
-          <StatCard key={m.metric} label={m.metric} value={fmt(m.latest_value)} unit={m.unit} />
+          <StatCard key={m.metric} label={`Latest ${m.metric} record`} value={fmt(m.latest_value)} unit={m.unit} />
         ))}
+        <StatCard label="Confirmed records" value={summary.data ? summary.data.reduce((total, item) => total + item.count, 0) : "-"} />
         <StatCard
-          label="Anomalies"
+          label="Flagged records"
           value={anomalies.data?.length ?? "-"}
-          unit="active"
+          unit="flags"
           accent="peach"
         />
       </div>

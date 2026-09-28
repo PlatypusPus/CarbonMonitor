@@ -43,7 +43,7 @@ function Field({ label, value }) {
   return (
     <div className="rounded-lg border border-line bg-canvas px-4 py-3">
       <div className="text-xs uppercase tracking-wider text-muted">{label}</div>
-      <div className="mt-1 break-all font-mono text-sm text-ink">{value ?? "–"}</div>
+      <div className="mt-1 break-all font-mono text-sm text-ink">{typeof value === "number" ? value.toLocaleString(undefined, { maximumFractionDigits: 2 }) : value ?? "–"}</div>
     </div>
   );
 }
@@ -572,7 +572,7 @@ export default function Intake() {
                         {draft.activity_type}
                       </span>
                       <span className="text-body">
-                        {draft.quantity} {draft.unit}
+                        {draft.quantity.toLocaleString(undefined, { maximumFractionDigits: 2 })} {draft.unit}
                       </span>
                       <span className="ml-auto font-mono text-xs text-muted">
                         {getFacilityName(facilities, draft.facility_id)}

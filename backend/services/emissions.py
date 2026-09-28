@@ -53,6 +53,7 @@ _INTERVAL_MAP = {
     "1h": ("hour", "trunc"),
     "6h": ("6 hours", "date_bin"),
     "1d": ("day", "trunc"),
+    "1mo": ("month", "trunc"),
 }
 
 
@@ -71,8 +72,8 @@ def query_timeseries(
     bucket_expr: Any
     if interval == "1h":
         bucket_expr = func.date_trunc("hour", ActivityRecord.period_start)
-    elif interval == "1d":
-        bucket_expr = func.date_trunc("day", ActivityRecord.period_start)
+    elif interval in ("1d", "1mo"):
+        bucket_expr = func.date_trunc(_INTERVAL_MAP[interval][0], ActivityRecord.period_start)
     elif interval in ("15m", "6h"):
         # date_bin requires origin; use 2001-01-01
         stride = "15 minutes" if interval == "15m" else "6 hours"
@@ -124,8 +125,8 @@ def query_crossverify(
         interval = "1d"
     if interval == "1h":
         bucket_expr = func.date_trunc("hour", ActivityRecord.period_start)
-    elif interval == "1d":
-        bucket_expr = func.date_trunc("day", ActivityRecord.period_start)
+    elif interval in ("1d", "1mo"):
+        bucket_expr = func.date_trunc(_INTERVAL_MAP[interval][0], ActivityRecord.period_start)
     elif interval in ("15m", "6h"):
         stride = "15 minutes" if interval == "15m" else "6 hours"
         bucket_expr = func.date_bin(text(f"'{stride}'"), ActivityRecord.period_start, text("'2001-01-01'::timestamptz"))

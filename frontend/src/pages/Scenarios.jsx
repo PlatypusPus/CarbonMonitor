@@ -5,6 +5,7 @@ import client from "../api/client";
 import { useFacilities } from "../api/hooks";
 
 const number = (value) => value.toLocaleString(undefined, { maximumFractionDigits: 2 });
+const inputQuantity = (value) => String(Number(value.toPrecision(12)));
 const month = (value) => new Date(value).toLocaleDateString(undefined, { month: "short", year: "numeric", timeZone: "UTC" });
 
 export default function Scenarios() {
@@ -45,7 +46,7 @@ export default function Scenarios() {
                 onChange={(event) => {
                   setRecordId(event.target.value);
                   const selected = records.data.find((item) => item.id === event.target.value);
-                  changeQuantity(selected ? String(selected.quantity) : "");
+                  changeQuantity(selected ? inputQuantity(selected.quantity) : "");
                 }} className="w-full rounded-lg border border-line bg-canvas p-3 text-sm">
                 <option value="">Choose a facility and month</option>
                 {records.data.map((item) => <option key={item.id} value={item.id}>
@@ -61,9 +62,9 @@ export default function Scenarios() {
                   className="w-full rounded-lg border border-line bg-canvas p-3 font-mono" />
                 <div className="flex flex-wrap gap-2">
                   {[10, 20, 30].map((reduction) => <button key={reduction} type="button" disabled={preview.isPending}
-                    onClick={() => changeQuantity(String(record.quantity * (1 - reduction / 100)))}
+                    onClick={() => changeQuantity(inputQuantity(record.quantity * (1 - reduction / 100)))}
                     className="rounded-lg border border-line px-3 py-2 text-sm hover:bg-canvas disabled:opacity-60">{reduction}% less</button>)}
-                  <button type="button" disabled={preview.isPending} onClick={() => changeQuantity(String(record.quantity))}
+                  <button type="button" disabled={preview.isPending} onClick={() => changeQuantity(inputQuantity(record.quantity))}
                     className="rounded-lg border border-line px-3 py-2 text-sm hover:bg-canvas">Reset</button>
                 </div>
               </>}

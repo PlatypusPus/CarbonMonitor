@@ -512,7 +512,7 @@ def test_backfilled_activity_does_not_replace_latest_reading(client, e2e_setup):
     assert petrol["count"] == 2
     latest = client.get("/api/emissions/latest", headers=headers, params={"metric": "petrol"})
     assert latest.json()[0]["value"] == pytest.approx(231)
-    for interval in ["15m", "1h", "6h", "1d"]:
+    for interval in ["15m", "1h", "6h", "1d", "1mo"]:
         series = client.get("/api/emissions/timeseries", headers=headers,
                             params={"metric": "petrol", "interval": interval})
         assert series.status_code == 200, series.text

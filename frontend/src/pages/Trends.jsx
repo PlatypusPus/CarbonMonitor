@@ -6,6 +6,7 @@ import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YA
 import { useSummary, useTimeseries } from "../api/hooks";
 
 const INTERVALS = [
+  { label: "1 month", value: "1mo" },
   { label: "15 min", value: "15m" },
   { label: "1 hr", value: "1h" },
   { label: "6 hr", value: "6h" },
@@ -14,8 +15,10 @@ const INTERVALS = [
 
 const fmt = (n, d = 1) =>
   typeof n === "number" ? n.toLocaleString(undefined, { maximumFractionDigits: d }) : "-";
-const time = (ts) =>
-  new Date(ts).toLocaleString([], { year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+const time = (ts, interval) =>
+  new Date(ts).toLocaleString([], { year: "numeric", month: "short", timeZone: "UTC",
+    ...(interval !== "1mo" ? { day: "numeric" } : {}),
+    ...(!["1mo", "1d"].includes(interval) ? { hour: "2-digit", minute: "2-digit" } : {}) });
 
 export default function Trends() {
   const navigate = useNavigate();
@@ -23,13 +26,13 @@ export default function Trends() {
   const metrics = summary.data ?? [];
 
   const [metric, setMetric] = useState("electricity");
-  const [interval, setInterval] = useState("1h");
+  const [interval, setInterval] = useState("1mo");
 
   // sync default when summary loads and current metric not in list
   const activeMetric = metrics.find((m) => m.metric === metric)?.metric ?? metrics[0]?.metric ?? metric;
   const effectiveMetric = activeMetric !== metric ? activeMetric : metric;
   const series = useTimeseries({ metric: effectiveMetric, interval });
-  const points = (series.data ?? []).map((p) => ({ t: time(p.timestamp), value: p.value }));
+  const points = (series.data ?? []).map((p) => ({ t: time(p.timestamp, interval), value: p.value }));
   const unitLabel = metrics.find((m) => m.metric === effectiveMetric)?.unit ?? "";
 
   return (
@@ -50,6 +53,7 @@ export default function Trends() {
 
       <div className="flex flex-wrap items-center gap-3">
         <select
+          aria-label="Activity type"
           value={effectiveMetric}
           onChange={(e) => setMetric(e.target.value)}
           className="rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink outline-none focus:border-leaf"
