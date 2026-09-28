@@ -1,6 +1,6 @@
 # College dataset
 
-The active local presentation database contains the original `electricity.xlsx` supplied by the college. All 14 monthly records, June 2025 through July 2026, belong to one facility named College Campus. The former HQ and three demo facility partitions are no longer present as separate sites.
+The active Docker presentation database contains the original `electricity.xlsx` supplied by the college. All 14 monthly records, June 2025 through July 2026, belong to one facility named College Campus. The former HQ and three demo facility partitions are no longer present as separate sites.
 
 The original workbook remains unchanged. The importer reads saved numeric results from Mescom Units, totalling 1,116,257.5 units. The current application treats those units as kWh and applies the configured factor. This unit assumption and the seeded factor still require validation for external reporting.
 
