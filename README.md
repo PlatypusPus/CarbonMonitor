@@ -1,29 +1,31 @@
 # CarbonTrace
 
-A project demo for reviewing electricity and fuel records, calculating Scope 1 and Scope 2 emissions, comparing facilities, and exporting a PDF report.
+Review electricity and fuel records, calculate Scope 1 and Scope 2 emissions, and export a PDF report.
 
 ## Start
 
-Copy `.env.example` to `.env`, configure the database and JWT secret, then run:
+From the repository root:
 
 ```sh
-docker compose up --build
+docker compose up -d backend postgres
+cd frontend
+npm ci
+npm run dev
 ```
 
-Open http://localhost. Create your first account using [Setup and login](docs/setup.md).
+Open **http://localhost:5173**. This is the active frontend. Docker supplies the API and persistent database; port 80 is disabled by default.
+
+For a fresh installation, copy `.env.example` to `.env` first. See [setup and login](docs/setup.md).
 
 ## Use
 
-1. Create a facility in Data Intake.
-2. Choose files and assign each to its intended facility.
-3. Check the preview, upload, and confirm the staged rows.
-4. View Overview or Trends, then download the ESG report.
+Select a facility in Data Intake, upload and review records, then confirm them. Overview, Trends, and the PDF report use confirmed data.
 
 ## Documentation
 
-- [Setup, login, and local development](docs/setup.md)
-- [College dataset and spreadsheet imports](docs/demo.md)
-- [Calculations, reporting, and limitations](docs/reporting.md)
+- [Setup and login](docs/setup.md)
+- [College dataset](docs/demo.md)
+- [Calculations and reporting](docs/reporting.md)
 - [Architecture and verification](docs/development.md)
 
-Built with React, FastAPI, PostgreSQL, and Docker Compose. Seeded emission factors are placeholders for demonstration.
+Built with React, FastAPI, and PostgreSQL. Seeded emission factors are demonstration placeholders.

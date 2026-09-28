@@ -1,39 +1,34 @@
 # Setup and login
 
-## Docker
+## Active setup: frontend on port 5173
 
-Copy `.env.example` to `.env`, fill in the environment values, and run `docker compose up --build` from the repository root. The app is at http://localhost and API documentation is at http://localhost/api/docs.
+Run these commands from the repository root:
 
-There is no default login and no public sign-up. Create an administrator:
+```sh
+docker compose up -d backend postgres
+cd frontend
+npm ci
+npm run dev
+```
+
+Open **http://localhost:5173**. Vite proxies `/api` to Docker's API on `127.0.0.1:8000`. Port 5173 is fixed; if another dev server is already using it, Vite stops instead of silently opening a different port. Use the running instance or stop it before restarting.
+
+Docker's persistent database contains 14 original college electricity records under College Campus. The former local test database on port 55439 is stopped. Passwords are supplied in the project chat, not committed.
+
+## Fresh installation and accounts
+
+Copy `.env.example` to `.env` and configure its secrets before starting Docker. Create an administrator from the repository root:
 
 ```sh
 docker compose exec backend python create_admin.py --email you@example.com --password "your-chosen-password" --role admin
 ```
 
-Use that email and password on the login page. Running this command for an existing email leaves its password unchanged. Test-suite credentials belong only to the disposable test database.
+An existing email keeps its password. There is no public sign-up or default account.
 
-## Local development
+## Updates and stopping
 
-Requirements: PostgreSQL, Python 3.11 or later with uv, Node 20 or later with npm.
+After backend changes, run `docker compose up -d --build backend`. Vite automatically refreshes frontend changes. Stop Vite with Ctrl+C in its terminal. `docker compose stop` stops Docker services without deleting data. Never use `docker compose down -v` unless you intend to delete the database.
 
-1. Copy `.env.example` to `.env`. Set `DATABASE_URL` to your local PostgreSQL address. The hostname `postgres` works inside Docker only; use `127.0.0.1` locally.
-2. From `backend`, run `uv sync --frozen`, then `uv run python create_admin.py --email you@example.com --password "your-chosen-password"`.
-3. Start the API with `uv run uvicorn main:app --reload`.
-4. From `frontend`, run `npm ci` and `npm run dev`.
-5. Open http://localhost:5173. Vite proxies `/api` to port 8000.
+## Optional packaged frontend
 
-Restart the service after changing environment variables. Rebuild Docker images after code changes with `docker compose up --build`.
-
-## Active presentation instance
-
-Use Docker at http://localhost. Its persistent PostgreSQL database contains the original 14 monthly electricity records under College Campus. The earlier local test servers and database on ports 5173 and 55439 are stopped. Do not start them for the presentation.
-
-From the repository root:
-
-```sh
-docker compose up -d --build
-docker compose restart nginx
-docker compose ps
-```
-
-Restarting nginx after recreating backend or frontend containers refreshes its upstream addresses. Use the login supplied in the project chat; passwords are not committed. Do not run `docker compose down -v`, which deletes the persistent database volume.
+Docker's static frontend and port-80 proxy are disabled by default behind the `web` profile. They are not needed for the presentation. Only start them intentionally with `docker compose --profile web up -d --build`. Stop them with `docker compose --profile web stop frontend nginx` before returning to the single frontend on port 5173.

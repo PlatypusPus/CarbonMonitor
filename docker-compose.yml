@@ -1,5 +1,5 @@
 # CarbonTrace — full stack orchestration
-# One command (`docker compose up`) brings up the entire system.
+# Default: API and database. Run the frontend with npm run dev on port 5173.
 #
 # NOTE: values come from the .env file in this same folder (see .env.example).
 # Docker Compose auto-loads .env for ${VAR} substitution below.
@@ -57,6 +57,7 @@ services:
   # files and served by nginx; this service is primarily for local dev.
   # ---------------------------------------------------------------------------
   frontend:
+    profiles: ["web"]
     build:
       context: ./frontend
       dockerfile: Dockerfile
@@ -77,6 +78,7 @@ services:
   # (which keeps cookies + CORS simple).
   # ---------------------------------------------------------------------------
   nginx:
+    profiles: ["web"]
     image: nginx:1.27-alpine
     container_name: carbontrace-nginx
     restart: unless-stopped
