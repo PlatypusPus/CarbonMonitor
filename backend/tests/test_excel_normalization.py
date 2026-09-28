@@ -32,6 +32,28 @@ def _electricity_bytes() -> bytes:
     return electricity_bytes()
 
 
+@pytest.mark.asyncio
+async def test_preview_validates_calculation_quantity():
+    from types import SimpleNamespace
+    from fastapi import HTTPException, UploadFile
+    from routers.upload import preview_upload
+
+    user = SimpleNamespace(facility_id=None)
+    valid = await preview_upload(
+        file=UploadFile(filename="electricity.xlsx", file=BytesIO(electricity_bytes())),
+        facility_id=None, db=None, user=user,
+    )
+    assert "Mescom Units" in valid.columns
+    assert valid.row_count == 14
+    assert valid.warnings
+    invalid = _build_workbook([["Month", "Mescom Units"], ["2025-06", "=1+1"]])
+    with pytest.raises(HTTPException) as error:
+        await preview_upload(file=UploadFile(filename="electricity.xlsx", file=BytesIO(invalid)),
+                             facility_id=None, db=None, user=user)
+    assert error.value.status_code == 422
+    assert "missing cached Mescom Units" in error.value.detail
+
+
 def _build_workbook(rows: list[list]) -> bytes:
     workbook = Workbook()
     sheet = workbook.active

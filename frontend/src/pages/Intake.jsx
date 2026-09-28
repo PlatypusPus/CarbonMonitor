@@ -58,6 +58,7 @@ export default function Intake() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const [file, setFile] = useState(null);
+  const [queuedFiles, setQueuedFiles] = useState([]);
   const [preview, setPreview] = useState(null);
   const [previewError, setPreviewError] = useState(null);
   const [msg, setMsg] = useState(null);
@@ -118,6 +119,7 @@ export default function Intake() {
       setView(created.length > 0 ? "current" : "saved");
       setSelectedId(null);
       setConfirmed([]);
+      setQueuedFiles((files) => files.filter((item) => item !== file));
       setMsg({
         type: staged > 0 ? "ok" : "info",
         text:
@@ -170,6 +172,8 @@ export default function Intake() {
       { label: "Facility", value: getFacilityName(facilities, selected.facility_id) },
       { label: "Status", value: selected.status },
       { label: "Source", value: selected.source_type },
+      { label: "Source file", value: selected.source_filename },
+      { label: "Source row / column", value: `${selected.source_row ?? "-"} / ${selected.source_column ?? "-"}` },
       { label: "Period start", value: new Date(selected.period_start).toLocaleString() },
       { label: "Period end", value: new Date(selected.period_end).toLocaleString() },
       { label: "Activity", value: selected.activity_type },
@@ -181,6 +185,12 @@ export default function Intake() {
   function handleFile(f) {
     setFile(f ?? null);
     setError("");
+  }
+
+  function chooseFiles(files) {
+    const chosen = Array.from(files ?? []);
+    setQueuedFiles(chosen);
+    handleFile(chosen[0]);
   }
 
   async function handleUpload(event) {
@@ -200,7 +210,7 @@ export default function Intake() {
 
   function handleDrop(event) {
     event.preventDefault();
-    handleFile(event.dataTransfer.files?.[0]);
+    chooseFiles(event.dataTransfer.files);
   }
 
   async function handleCreateFacility(event) {
@@ -312,11 +322,25 @@ export default function Intake() {
               </span>
               <input
                 type="file"
+                multiple
                 accept={ACCEPT}
-                onChange={(event) => handleFile(event.target.files?.[0])}
+                onChange={(event) => chooseFiles(event.target.files)}
                 className="hidden"
               />
             </label>
+
+            {queuedFiles.length > 0 && (
+              <div className="flex flex-col gap-2">
+                <p className="text-xs text-muted">Choose each file, assign its facility, then upload. Successfully staged files leave this queue.</p>
+                {queuedFiles.map((item, index) => (
+                  <button key={`${item.name}-${index}`} type="button" disabled={submitting}
+                    onClick={() => { handleFile(item); setFacilityId(user?.facility_id ?? ""); }}
+                    className={`rounded-lg border px-3 py-2 text-left text-sm ${item === file ? "border-leaf bg-canvas" : "border-line"}`}>
+                    {item.name}{item === file ? " (selected)" : ""}
+                  </button>
+                ))}
+              </div>
+            )}
 
             <div className="flex flex-col gap-2">
               <label
@@ -370,7 +394,7 @@ export default function Intake() {
 
             <button
               type="submit"
-              disabled={!file || submitting || (facilities.length > 0 && !facilityId)}
+              disabled={!file || submitting || preview === "loading" || !!previewError || !facilityId}
               className="rounded-xl bg-leaf py-3.5 font-bold text-white shadow-card transition-colors hover:bg-leaf-hover disabled:opacity-60"
             >
               {submitting ? (
@@ -397,6 +421,7 @@ export default function Intake() {
 
           {preview && preview !== "loading" && (
             <div className="mt-3">
+              {preview.warnings?.map((warning) => <p key={warning} className="mb-2 text-xs text-amber-800">{warning}</p>)}
               <p className="mb-2 text-sm text-muted">
                 {preview.columns.length} columns · {preview.row_count} row
                 {preview.row_count === 1 ? "" : "s"}

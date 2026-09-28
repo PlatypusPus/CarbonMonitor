@@ -73,8 +73,16 @@ async def preview_upload(
             # Use the same Excel parser as the real ingestion path
             from services.excel.parser import parse_workbook
             from services.excel.detector import detect_electricity_workbook
+            from services.excel.normalizer import normalize_workbook, select_activity_quantity
+            from schemas.activity_record import ActivityValues
 
             parsed = parse_workbook(content, filename=file.filename or "excel-upload")
+            normalized = normalize_workbook(parsed)
+            for record in normalized:
+                quantity, unit, _ = select_activity_quantity(record)
+                if quantity is None:
+                    raise ValueError(f"row {record.source_row}: missing cached Mescom Units; recalculate and save the workbook")
+                ActivityValues(activity_type="electricity", quantity=quantity, unit=unit)
 
             if not detect_electricity_workbook(parsed):
                 raise HTTPException(
@@ -88,9 +96,9 @@ async def preview_upload(
             facility = db.get(Facility, target_facility_id) if target_facility_id else None
 
             # Use normalized headers and first few data rows for preview
-            columns = list(parsed.headers)
+            columns = ["month", "mescom units", "sol units", "ex units", "total units"]
             # Filter out empty headers
-            columns = [c for c in columns if c]
+            columns = [c for c in columns if c in parsed.headers]
 
             # Map normalized -> raw for display
             header_map = dict(zip(parsed.headers, parsed.raw_headers))
@@ -99,7 +107,7 @@ async def preview_upload(
             preview_rows = []
             for row in parsed.rows[:PREVIEW_ROW_LIMIT]:
                 row_data = []
-                for header in parsed.headers:
+                for header in columns:
                     if header:
                         value = row.values[parsed.headers.index(header)]
                         row_data.append(_display_cell(value))
@@ -116,6 +124,10 @@ async def preview_upload(
                 columns=columns_display,
                 rows=preview_rows,
                 row_count=len(parsed.rows),
+                warnings=[
+                    "Calculations use saved Mescom Units as kWh. Solar and exported units are not subtracted.",
+                    "Formula results are cached values. Splitting a workbook can break references; verify the original totals before confirming.",
+                ],
             )
         else:
             # CSV path unchanged

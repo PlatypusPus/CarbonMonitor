@@ -3,7 +3,7 @@
 import uuid
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class UploadResponse(BaseModel):
@@ -21,3 +21,4 @@ class UploadPreviewResponse(BaseModel):
     columns: list[str]
     rows: list[list[str | None]]
     row_count: int
+    warnings: list[str] = Field(default_factory=list)
