@@ -6,6 +6,7 @@ must never move a dashboard or a report until a human approves them.
 """
 
 from typing import Any
+from uuid import UUID
 
 from sqlalchemy.orm import Session
 
@@ -21,6 +22,7 @@ def query_latest(
     source: str | None = None,
     facility: str | None = None,
     limit: int = 20,
+    facility_id: UUID | None = None,
 ) -> list[dict[str, Any]]:
     """Latest calculated emissions, newest first."""
     from models.facility import Facility
@@ -28,6 +30,8 @@ def query_latest(
     q = db.query(CalculatedEmission, ActivityRecord, Facility).join(
         ActivityRecord, CalculatedEmission.activity_record_id == ActivityRecord.id
     ).outerjoin(Facility, ActivityRecord.facility_id == Facility.id).filter(CONFIRMED_ONLY)
+    if facility_id is not None:
+        q = q.filter(ActivityRecord.facility_id == facility_id)
     if metric:
         q = q.filter(ActivityRecord.activity_type == metric)
     if source:
@@ -62,6 +66,7 @@ def query_timeseries(
     metric: str,
     interval: str = "1h",
     source: str | list[str] | None = None,
+    facility_id: UUID | None = None,
 ) -> list[dict[str, Any]]:
     """Aggregate co2e_kg by time bucket (period_start)."""
     from sqlalchemy import func, text
@@ -93,6 +98,8 @@ def query_timeseries(
         .group_by(text("bucket"))
         .order_by(text("bucket"))
     )
+    if facility_id is not None:
+        q = q.filter(ActivityRecord.facility_id == facility_id)
     if source:
         if isinstance(source, list):
             q = q.filter(ActivityRecord.source.in_(source))
@@ -113,10 +120,11 @@ def query_crossverify(
     metric: str,
     interval: str = "1d",
     source: str | None = None,
+    facility_id: UUID | None = None,
 ) -> list[dict[str, Any]]:
     """Compare upload (csv/excel) vs live (ocr/manual) per time bucket with discrepancy %."""
     # source param ignored for cross-verify — always compares upload sources vs non-upload sources
-    upload_rows = {r["timestamp"]: r for r in query_timeseries(db, metric, interval, source=list(UPLOAD_SOURCES))}
+    upload_rows = {r["timestamp"]: r for r in query_timeseries(db, metric, interval, source=list(UPLOAD_SOURCES), facility_id=facility_id)}
 
     # filter live to exclude upload sources: manual + ocr
     from sqlalchemy import func, text
@@ -145,6 +153,8 @@ def query_crossverify(
         .group_by(text("bucket"))
         .order_by(text("bucket"))
     )
+    if facility_id is not None:
+        live_q = live_q.filter(ActivityRecord.facility_id == facility_id)
     live_map = {r.bucket: float(r.value) for r in live_q.all()}
     upload_map = {r["timestamp"]: r["value"] for r in upload_rows.values()}
 
@@ -162,7 +172,7 @@ def query_crossverify(
     return out
 
 
-def query_summary(db: Session) -> list[dict[str, Any]]:
+def query_summary(db: Session, facility_id: UUID | None = None) -> list[dict[str, Any]]:
     """Aggregate co2e_kg by activity_type with chronological latest."""
     from sqlalchemy import func
 
@@ -175,6 +185,7 @@ def query_summary(db: Session) -> list[dict[str, Any]]:
         )
         .join(ActivityRecord, CalculatedEmission.activity_record_id == ActivityRecord.id)
         .filter(CONFIRMED_ONLY)
+        .filter(ActivityRecord.facility_id == facility_id if facility_id is not None else True)
         .group_by(ActivityRecord.activity_type)
         .all()
     )
@@ -187,6 +198,7 @@ def query_summary(db: Session) -> list[dict[str, Any]]:
         )
         .join(ActivityRecord, CalculatedEmission.activity_record_id == ActivityRecord.id)
         .filter(CONFIRMED_ONLY)
+        .filter(ActivityRecord.facility_id == facility_id if facility_id is not None else True)
         .distinct(ActivityRecord.activity_type)
         .order_by(ActivityRecord.activity_type, ActivityRecord.period_start.desc(), CalculatedEmission.calculated_at.desc())
         .all()

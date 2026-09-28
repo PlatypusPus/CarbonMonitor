@@ -1,10 +1,11 @@
 """Facilities router — CRUD for monitored sites."""
 
+from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from database import get_db
-from dependencies import get_current_user, require_role
+from dependencies import get_current_user, require_role, check_facility_access
 from models.facility import Facility
 from models.user import User
 from schemas.facility import FacilityCreate, FacilityResponse, FacilityUpdate
@@ -25,13 +26,12 @@ def list_facilities(
 
 @router.get("/{facility_id}", response_model=FacilityResponse)
 def get_facility(
-    facility_id: str,
+    facility_id: UUID,
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ) -> Facility:
     """Get a single facility by ID."""
-    from uuid import UUID
-    facility = db.get(Facility, UUID(facility_id))
+    facility = db.get(Facility, facility_id)
     if facility is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Facility not found")
     if user.role.name != "admin" and facility.id != user.facility_id:
@@ -43,7 +43,7 @@ def get_facility(
 def create_facility(
     payload: FacilityCreate,
     db: Session = Depends(get_db),
-    user: User = Depends(require_role("admin", "facility_manager")),
+    user: User = Depends(require_role("admin")),
 ) -> Facility:
     facility = Facility(
         name=payload.name,
@@ -55,39 +55,27 @@ def create_facility(
     db.commit()
     db.refresh(facility)
 
-    # Auto-assign facility to the creating facility_manager so they can use it
-    if user.role.name == "facility_manager":
-        user.facility_id = facility.id
-        db.commit()
-    elif user.role.name == "admin" and user.facility_id is None:
-        # Admin without a facility gets assigned too
-        user.facility_id = facility.id
-        db.commit()
-
     return facility
 
 
 @router.patch("/{facility_id}", response_model=FacilityResponse)
 def update_facility(
-    facility_id: str,
+    facility_id: UUID,
     payload: FacilityUpdate,
     db: Session = Depends(get_db),
-    user: User = Depends(require_role("admin")),
+    user: User = Depends(require_role("admin", "facility_manager")),
 ) -> Facility:
-    """Update a facility (admin only)."""
-    from uuid import UUID
-    facility = db.get(Facility, UUID(facility_id))
+    """Managers can edit their own facility's details."""
+    check_facility_access(user, facility_id)
+    facility = db.get(Facility, facility_id)
     if facility is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Facility not found")
 
-    if payload.name is not None:
-        facility.name = payload.name
-    if payload.location is not None:
-        facility.location = payload.location
-    if payload.region_code is not None:
-        facility.region_code = payload.region_code
-    if payload.facility_type is not None:
-        facility.facility_type = payload.facility_type
+    changes = payload.model_dump(exclude_unset=True)
+    if "name" in changes and changes["name"] is None:
+        raise HTTPException(422, "Facility name cannot be null")
+    for key, value in changes.items():
+        setattr(facility, key, value)
 
     db.commit()
     db.refresh(facility)
@@ -96,13 +84,12 @@ def update_facility(
 
 @router.delete("/{facility_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_facility(
-    facility_id: str,
+    facility_id: UUID,
     db: Session = Depends(get_db),
     user: User = Depends(require_role("admin")),
 ) -> None:
     """Delete a facility (admin only)."""
-    from uuid import UUID
-    facility = db.get(Facility, UUID(facility_id))
+    facility = db.get(Facility, facility_id)
     if facility is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Facility not found")
     db.delete(facility)

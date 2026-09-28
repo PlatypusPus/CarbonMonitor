@@ -5,21 +5,23 @@ from datetime import datetime
 
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 FacilityType = Literal["office", "warehouse", "data_center", "manufacturing"]
 
 
 class FacilityCreate(BaseModel):
-    name: str
-    location: str | None = None
-    region_code: str | None = None
+    model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
+    name: str = Field(min_length=1, max_length=255)
+    location: str | None = Field(default=None, max_length=255)
+    region_code: str | None = Field(default=None, max_length=50)
     facility_type: FacilityType | None = None
 
 class FacilityUpdate(BaseModel):
-    name: str | None = None
-    location: str | None = None
-    region_code: str | None = None
+    model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
+    name: str | None = Field(default=None, min_length=1, max_length=255)
+    location: str | None = Field(default=None, max_length=255)
+    region_code: str | None = Field(default=None, max_length=50)
     facility_type: FacilityType | None = None
 
 
@@ -28,7 +30,7 @@ class FacilityResponse(BaseModel):
 
     id: uuid.UUID
     name: str
-    location: str | None = None
-    region_code: str | None = None
+    location: str | None = Field(default=None, max_length=255)
+    region_code: str | None = Field(default=None, max_length=50)
     facility_type: str | None = None
     created_at: datetime

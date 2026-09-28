@@ -9,7 +9,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from database import get_db
-from dependencies import check_facility_access, get_current_user, require_role
+from dependencies import check_facility_access, get_current_user, require_role, facility_scope
 from models.activity_record import ActivityRecord
 from models.calculated_emission import CalculatedEmission
 from models.facility import Facility
@@ -60,16 +60,17 @@ def list_activity_records(
 def list_activity_drafts(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
+    scope: UUID | None = Depends(facility_scope),
 ) -> list[OCRDraft]:
     """List saved intake drafts, newest first.
 
-    Admins see every draft; other users only see their own. Confirmed drafts
+    Admins see every draft; managers share their facility's drafts. Confirmed drafts
     stay visible with their linked activity_record_id, so the intake page can
     restore state after navigation.
     """
     query = db.query(OCRDraft)
-    if user.role.name != "admin":
-        query = query.filter(OCRDraft.user_id == user.id)
+    if scope is not None:
+        query = query.filter(OCRDraft.facility_id == scope)
     return query.order_by(OCRDraft.created_at.desc()).all()
 
 
@@ -447,7 +448,7 @@ def confirm_ocr_draft(
     """
     # Lock the draft row to prevent concurrent confirmations
     draft = db.query(OCRDraft).filter(OCRDraft.id == draft_id).with_for_update().first()
-    if draft is None or (draft.user_id != user.id and user.role.name != "admin"):
+    if draft is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="OCR draft not found")
 
     # Enforce facility access on the draft's facility
@@ -509,7 +510,7 @@ def reject_ocr_draft(
     """
     # Lock the draft row to prevent concurrent operations
     draft = db.query(OCRDraft).filter(OCRDraft.id == draft_id).with_for_update().first()
-    if draft is None or (draft.user_id != user.id and user.role.name != "admin"):
+    if draft is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="OCR draft not found")
 
     # Enforce facility access on the draft's facility

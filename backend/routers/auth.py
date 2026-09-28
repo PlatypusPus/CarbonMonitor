@@ -2,6 +2,7 @@
 
 from fastapi import APIRouter, Cookie, Depends, HTTPException, Response, status
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 
 from config import get_settings
 from database import get_db
@@ -33,7 +34,7 @@ def _set_refresh_cookie(response: Response, token: str) -> None:
 
 @router.post("/login", response_model=TokenResponse)
 def login(payload: LoginRequest, response: Response, db: Session = Depends(get_db)) -> TokenResponse:
-    user = db.query(User).filter(User.email == payload.email).first()
+    user = db.query(User).filter(func.lower(User.email) == str(payload.email).strip().lower()).first()
     if user is None or not verify_password(payload.password, user.hashed_password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

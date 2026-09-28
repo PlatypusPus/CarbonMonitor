@@ -12,6 +12,7 @@ TODO: _fetch_recent(), run_detection(), and query_anomalies() previously used El
 import logging
 from collections import defaultdict
 from typing import Any
+from uuid import UUID
 
 from sqlalchemy.orm import Session
 
@@ -39,7 +40,7 @@ def detect(
     """
     groups: dict[tuple[Any, Any], list[dict[str, Any]]] = defaultdict(list)
     for reading in readings:
-        groups[(reading.get("metric"), reading.get("facility_name"))].append(reading)
+        groups[(reading.get("metric"), reading.get("facility_id", reading.get("facility_name")))].append(reading)
 
     anomalies: list[dict[str, Any]] = []
     for items in groups.values():
@@ -66,7 +67,7 @@ def detect(
     return anomalies
 
 
-def run_detection(db: Session) -> int:
+def run_detection(db: Session, facility_id: UUID | None = None) -> int:
     from datetime import datetime, timedelta, timezone
     from sqlalchemy import select
     from models.calculated_emission import CalculatedEmission
@@ -86,6 +87,8 @@ def run_detection(db: Session) -> int:
         .where(ActivityRecord.confirmed_by_user.is_(True))
     )
     
+    if facility_id is not None:
+        stmt = stmt.where(ActivityRecord.facility_id == facility_id)
     results = db.execute(stmt).all()
     
     if not results:
@@ -96,6 +99,7 @@ def run_detection(db: Session) -> int:
         readings.append({
             "metric": record.activity_type,
             "facility_name": fac.name,
+            "facility_id": str(fac.id),
             "value": float(calc.co2e_kg),
             "unit": "kg CO2e",
             "source": record.source,
@@ -139,11 +143,18 @@ def query_anomalies(
     metric: str | None = None,
     facility: str | None = None,
     limit: int = 50,
+    facility_id: UUID | None = None,
 ) -> list[dict[str, Any]]:
     from sqlalchemy import select
     from models.anomaly import Anomaly
     
     stmt = select(Anomaly).order_by(Anomaly.timestamp.desc()).limit(limit)
+    if facility_id is not None:
+        from models.calculated_emission import CalculatedEmission
+        from models.activity_record import ActivityRecord
+        stmt = stmt.join(CalculatedEmission, Anomaly.calculated_emission_id == CalculatedEmission.id).join(
+            ActivityRecord, CalculatedEmission.activity_record_id == ActivityRecord.id
+        ).where(ActivityRecord.facility_id == facility_id)
     if metric:
         stmt = stmt.where(Anomaly.metric == metric)
     if facility:

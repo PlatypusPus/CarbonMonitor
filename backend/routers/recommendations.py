@@ -8,7 +8,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from database import get_db
-from dependencies import get_current_user, check_facility_access
+from dependencies import get_current_user, check_facility_access, facility_scope
 from models.user import User
 from models.recommendation import Recommendation
 from schemas.recommendation import RecommendationResponse
@@ -27,7 +27,7 @@ def list_recommendations(
     if facility_id:
         check_facility_access(current_user, facility_id)
     elif current_user.role.name != "admin":
-        facility_id = current_user.facility_id
+        facility_id = facility_scope(None, current_user)
 
     stmt = select(Recommendation)
     if facility_id:

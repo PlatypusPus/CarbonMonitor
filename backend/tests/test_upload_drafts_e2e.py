@@ -517,3 +517,57 @@ def test_backfilled_activity_does_not_replace_latest_reading(client, e2e_setup):
                             params={"metric": "petrol", "interval": interval})
         assert series.status_code == 200, series.text
         assert sum(row["value"] for row in series.json()) == pytest.approx(346.5)
+
+
+def test_managers_have_isolated_monthly_aggregates(client, e2e_setup):
+    from uuid import uuid4
+    from io import BytesIO
+    from pypdf import PdfReader
+
+    admin_headers, _ = e2e_setup
+    suffix = uuid4().hex[:10]
+    managers = []
+    for label, quantity in [("North", 100), ("South", 900)]:
+        facility = client.post("/api/facilities", headers=admin_headers, json={"name": f"{label}-{suffix}"})
+        assert facility.status_code == 201, facility.text
+        fid = facility.json()["id"]
+        email = f"{label.lower()}-{suffix}@example.com"
+        created = client.post("/api/users", headers=admin_headers, json={"email": email,
+            "full_name": label, "password": "isolation-test-password", "facility_id": fid})
+        assert created.status_code == 201, created.text
+        login = client.post("/api/auth/login", json={"email": email, "password": "isolation-test-password"})
+        assert login.status_code == 200, login.text
+        headers = {"Authorization": "Bearer " + login.json()["access_token"]}
+        upload = client.post("/api/upload", headers=headers, files={"file": ("own.csv",
+            _csv([("2026-05-01T00:00:00", quantity)]).encode(), "text/csv")})
+        assert upload.status_code == 201, upload.text
+        drafts = client.get("/api/activity/drafts", headers=headers).json()
+        assert len(drafts) == 1 and drafts[0]["facility_id"] == fid
+        confirm = client.post(f"/api/activity/ocr/{drafts[0]['id']}/confirm", headers=headers)
+        assert confirm.status_code == 201, confirm.text
+        managers.append((headers, fid, quantity, label))
+    for headers, fid, quantity, label in managers:
+        for interval in ["1h", "1d", "1mo"]:
+            series = client.get("/api/emissions/timeseries", headers=headers,
+                params={"metric": "electricity", "interval": interval})
+            assert series.status_code == 200, series.text
+            assert len(series.json()) == 1
+            assert series.json()[0]["value"] == pytest.approx(quantity * .82)
+        cross = client.get("/api/emissions/crossverify", headers=headers,
+            params={"metric": "electricity", "interval": "1mo"})
+        assert cross.status_code == 200, cross.text
+        assert len(cross.json()) == 1 and cross.json()[0]["upload_value"] == pytest.approx(quantity * .82)
+        summary = client.get("/api/emissions/summary", headers=headers).json()
+        assert len(summary) == 1 and summary[0]["count"] == 1
+        assert summary[0]["avg_value"] == pytest.approx(quantity * .82)
+        scoped_admin = client.get("/api/emissions/summary", headers=admin_headers, params={"facility_id": fid})
+        assert scoped_admin.json() == summary
+        other_id = next(other[1] for other in managers if other[1] != fid)
+        for path in ["timeseries", "crossverify", "latest", "summary"]:
+            assert client.get(f"/api/emissions/{path}", headers=headers,
+                params={"metric": "electricity", "facility_id": other_id}).status_code == 403
+        report = client.get("/api/reports/esg", headers=headers)
+        assert report.status_code == 200
+        text = "".join(page.extract_text() for page in PdfReader(BytesIO(report.content)).pages)
+        assert f"{label}-{suffix}" in text
+        assert f"{'South' if label == 'North' else 'North'}-{suffix}" not in text

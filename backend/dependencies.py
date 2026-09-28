@@ -55,8 +55,22 @@ def require_role(*allowed_roles: str) -> Callable[[User], User]:
     return checker
 
 def check_facility_access(user: User, facility_id: uuid.UUID) -> None:
-    if user.role.name != "admin" and user.facility_id != facility_id:
+    if user.role.name != "admin" and (user.facility_id is None or user.facility_id != facility_id):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Not authorized to access this facility",
         )
+
+
+def facility_scope(
+    facility_id: uuid.UUID | None = None,
+    user: User = Depends(get_current_user),
+) -> uuid.UUID | None:
+    """None means all facilities for admins only; unassigned accounts fail closed."""
+    if user.role.name == "admin":
+        return facility_id
+    if user.facility_id is None:
+        raise HTTPException(status_code=403, detail="Ask an administrator to assign your facility")
+    if facility_id is not None:
+        check_facility_access(user, facility_id)
+    return user.facility_id

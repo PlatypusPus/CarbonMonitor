@@ -1,13 +1,14 @@
 """Flagged anomaly records and detection triggers."""
 
 from typing import Any
+from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from database import get_db
 
-from dependencies import get_current_user
+from dependencies import get_current_user, facility_scope, require_role
 from models.user import User
 from schemas.anomaly import AnomalyRecord
 from services import anomaly as anomaly_service
@@ -22,15 +23,17 @@ def list_anomalies(
     limit: int = Query(50, ge=1, le=200),
     _user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
+    scope: UUID | None = Depends(facility_scope),
 ) -> Any:
-    return anomaly_service.query_anomalies(db, metric, facility, limit)
+    return anomaly_service.query_anomalies(db, metric, facility, limit, facility_id=scope)
 
 
 @router.post("/run", response_model=dict[str, int])
 def run_anomaly_detection(
-    _user: User = Depends(get_current_user),
+    _user: User = Depends(require_role("admin", "facility_manager")),
     db: Session = Depends(get_db),
+    scope: UUID | None = Depends(facility_scope),
 ) -> Any:
     """Manually trigger the anomaly detection job."""
-    count = anomaly_service.run_detection(db)
+    count = anomaly_service.run_detection(db, facility_id=scope)
     return {"anomalies_detected": count}
