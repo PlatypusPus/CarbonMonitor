@@ -27,4 +27,6 @@ __all__ = [
     "UserSession",
     "Upload",
     "User",
+    "Organization",
+    "EmailToken",
 ]
