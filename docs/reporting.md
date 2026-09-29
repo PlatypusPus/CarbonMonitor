@@ -20,4 +20,4 @@ Anomaly detection requires at least 20 readings in each facility and activity gr
 
 Open **What-if Scenarios**, select a confirmed monthly record, and enter a proposed consumption or choose a reduction preset. The comparison uses that record's applied emission factor and shows the projected emissions and change. Scenarios are hypothetical previews: they do not save activity, change the college data, or contribute to report totals.
 
-Authentication supports login, refresh, and logout. Fine-grained reporting authorization and legacy-database migration validation remain outside the presentation scope.
+Authentication supports login, refresh, and logout. Managers' PDFs include only their assigned facility; administrators can export all facilities or select one in the workspace header. See [facilities and user access](access.md).

@@ -11,6 +11,7 @@ import Onboarding from "./pages/Onboarding";
 import Trends from "./pages/Trends";
 import Intake from "./pages/Intake";
 import Scenarios from "./pages/Scenarios";
+import Administration from "./pages/Administration";
 import { useAuth } from "./context/AuthContext";
 import { getOnboarding } from "./lib/onboarding";
 
@@ -35,6 +36,7 @@ export default function App() {
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/trends" element={<Trends />} />
         <Route path="/scenarios" element={<Scenarios />} />
+        <Route path="/administration" element={<Administration />} />
         <Route path="/anomalies" element={<Anomalies />} />
         <Route path="/ocr" element={<Navigate to="/upload" replace />} />
         <Route path="/esg-report" element={<ESGReport />} />

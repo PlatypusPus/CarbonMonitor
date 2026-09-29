@@ -1,8 +1,8 @@
 import { useState } from "react";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import client from "../api/client";
-import { useFacilities } from "../api/hooks";
+import { useFacilities, useActivity } from "../api/hooks";
 
 const number = (value) => value.toLocaleString(undefined, { maximumFractionDigits: 2 });
 const inputQuantity = (value) => String(Number(value.toPrecision(12)));
@@ -10,7 +10,7 @@ const month = (value) => new Date(value).toLocaleDateString(undefined, { month: 
 
 export default function Scenarios() {
   const facilities = useFacilities();
-  const records = useQuery({ queryKey: ["scenario-records"], queryFn: () => client.get("/activity").then((r) => r.data) });
+  const records = useActivity();
   const [recordId, setRecordId] = useState("");
   const [quantity, setQuantity] = useState("");
   const [result, setResult] = useState(null);

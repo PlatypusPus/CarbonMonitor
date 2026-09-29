@@ -11,6 +11,7 @@ import {
   useRejectOCRDraft,
 } from "../api/hooks";
 import { useAuth } from "../context/AuthContext";
+import { useWorkspace } from "../context/WorkspaceContext";
 
 const SPREADSHEET = /\.(csv|xlsx)$/i;
 const ACCEPT = ".csv,.xlsx,.pdf,.png,.jpg,.jpeg,.webp,.txt,application/pdf,image/*,text/csv";
@@ -57,6 +58,7 @@ function getFacilityName(facilities, facilityId) {
 export default function Intake() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  const { facilityId: workspaceFacility } = useWorkspace();
   const [file, setFile] = useState(null);
   const [queuedFiles, setQueuedFiles] = useState([]);
   const [preview, setPreview] = useState(null);
@@ -68,7 +70,7 @@ export default function Intake() {
   const [rejected, setRejected] = useState([]);
   const [currentDrafts, setCurrentDrafts] = useState([]);
   const [view, setView] = useState("saved");
-  const [facilityId, setFacilityId] = useState("");
+  const [facilityId, setFacilityId] = useState(workspaceFacility || user?.facility_id || "");
   const [newFacilityName, setNewFacilityName] = useState("");
 
   const draftsQuery = useActivityDrafts();
@@ -77,7 +79,7 @@ export default function Intake() {
   const confirmDraft = useConfirmOCRDraft();
   const rejectDraft = useRejectOCRDraft();
 
-  const facilities = facilitiesQuery.data ?? [];
+  const facilities = (facilitiesQuery.data ?? []).filter((f) => !workspaceFacility || f.id === workspaceFacility);
   const savedDrafts = draftsQuery.data ?? [];
   const visibleDrafts = (view === "saved" ? savedDrafts : currentDrafts).filter(
     (draft) => !rejected.includes(draft.id),
@@ -296,6 +298,10 @@ export default function Intake() {
         </p>
       </div>
 
+      <ol aria-label="Upload workflow" className="grid gap-3 sm:grid-cols-3">
+        {[["01", "Choose your facility", "Records stay within this workspace."], ["02", "Upload and review", "Check quantities before confirming."], ["03", "Confirm to the ledger", "Dashboards and reports update together."]].map(([step, title, detail]) => <li key={step} className="flex gap-3 rounded-xl border border-line bg-surface p-4"><span className="font-mono text-sm font-semibold text-leaf">{step}</span><div><p className="text-sm font-semibold text-ink">{title}</p><p className="mt-1 text-xs text-muted">{detail}</p></div></li>)}
+      </ol>
+
       <div className="grid gap-4 lg:grid-cols-2">
         <div className="rounded-card border border-line bg-surface p-5">
           <div className="mb-4 flex items-center gap-3">
@@ -334,7 +340,7 @@ export default function Intake() {
                 <p className="text-xs text-muted">Choose each file, assign its facility, then upload. Successfully staged files leave this queue.</p>
                 {queuedFiles.map((item, index) => (
                   <button key={`${item.name}-${index}`} type="button" disabled={submitting}
-                    onClick={() => { handleFile(item); setFacilityId(user?.facility_id ?? ""); }}
+                    onClick={() => { handleFile(item); setFacilityId(workspaceFacility || user?.facility_id || ""); }}
                     className={`rounded-lg border px-3 py-2 text-left text-sm ${item === file ? "border-leaf bg-canvas" : "border-line"}`}>
                     {item.name}{item === file ? " (selected)" : ""}
                   </button>
@@ -364,7 +370,7 @@ export default function Intake() {
                   ))}
                 </select>
               ) : (
-                <div className="text-sm text-muted">No facilities yet — create one below.</div>
+                <div className="text-sm text-muted">{user?.role === "admin" ? "No facilities yet. Add one to get started." : "Ask your administrator to assign your facility before uploading."}</div>
               )}
               <p className="text-xs text-muted">
                 {isSpreadsheetFile
@@ -373,7 +379,7 @@ export default function Intake() {
               </p>
             </div>
 
-            <div className="flex gap-2">
+            {user?.role === "admin" && !workspaceFacility && <div className="flex gap-2">
               <input
                 type="text"
                 value={newFacilityName}
@@ -390,7 +396,7 @@ export default function Intake() {
                 <Plus size={15} />
                 {createFacility.isPending ? "Adding…" : "Add"}
               </button>
-            </div>
+            </div>}
 
             <button
               type="submit"

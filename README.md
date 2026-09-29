@@ -24,6 +24,7 @@ Select a facility in Data Intake, upload and review records, then confirm them. 
 ## Documentation
 
 - [Setup and login](docs/setup.md)
+- [Facilities and user access](docs/access.md)
 - [College dataset](docs/demo.md)
 - [Calculations and reporting](docs/reporting.md)
 - [Architecture and verification](docs/development.md)

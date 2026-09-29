@@ -2,8 +2,10 @@ import { FileText } from "lucide-react";
 import { useState } from "react";
 
 import client from "../api/client";
+import { useWorkspace } from "../context/WorkspaceContext";
 
 export default function ESGReport() {
+  const { facilityId } = useWorkspace();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -11,7 +13,7 @@ export default function ESGReport() {
     setError("");
     setLoading(true);
     try {
-      const res = await client.get("/reports/esg", { responseType: "blob" });
+      const res = await client.get("/reports/esg", { responseType: "blob", params: { facility_id: facilityId || undefined } });
       const url = URL.createObjectURL(res.data);
       const a = document.createElement("a");
       a.href = url;
