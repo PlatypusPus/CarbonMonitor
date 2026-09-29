@@ -22,3 +22,97 @@ input:focus-visible,
 select:focus-visible {
   @apply outline-none ring-2 ring-leaf ring-offset-2;
 }
+
+/* Shared native controls preserve keyboard navigation and mobile pickers. */
+select:not([multiple]),
+input[type="date"] {
+  @apply min-h-11 rounded-lg border bg-surface text-sm text-ink;
+  border-color: #cbd8d0;
+  box-shadow: 0 1px 2px rgb(25 58 39 / 5%);
+  transition: border-color 150ms ease, background-color 150ms ease;
+}
+
+select:not([multiple]) {
+  appearance: none;
+  padding: 0.625rem 2.75rem 0.625rem 0.875rem;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='%23236F4B' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-position: right 0.875rem center;
+  background-repeat: no-repeat;
+  cursor: pointer;
+  max-width: 100%;
+  text-overflow: ellipsis;
+}
+
+select option {
+  @apply bg-surface text-ink;
+}
+
+input[type="date"] {
+  padding: 0.625rem 0.875rem;
+  color-scheme: light;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator {
+  opacity: 0.65;
+  cursor: pointer;
+}
+
+button {
+  transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease;
+}
+
+button.border,
+.button-secondary {
+  min-height: 2.75rem;
+  border-color: #cbd8d0;
+  font-weight: 600;
+}
+
+@media (hover: hover) {
+  select:not(:disabled):hover,
+  input[type="date"]:not(:disabled):hover,
+  button.border:not(:disabled):hover,
+  .button-secondary:not(:disabled):hover {
+    border-color: #6c9980;
+  }
+  button.border:not(:disabled):hover,
+  .button-secondary:not(:disabled):hover {
+    background-color: #edf6f0;
+    color: #195a3c;
+  }
+}
+
+button:disabled,
+select:disabled,
+input:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.button-secondary {
+  @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border bg-surface px-4 py-2 text-sm font-semibold text-leaf-action;
+}
+
+.interval-control {
+  @apply flex max-w-full flex-wrap gap-1 rounded-xl border border-line bg-canvas p-1;
+}
+
+.interval-control button {
+  @apply min-h-11 rounded-lg px-4 py-2 text-sm font-semibold text-body;
+}
+
+.interval-control button[aria-pressed="true"] {
+  @apply bg-leaf-action text-white shadow-sm;
+}
+
+.interval-control button[aria-pressed="false"]:hover {
+  @apply bg-surface text-leaf-action;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  button, select, input { transition: none; }
+}
+
+@media (forced-colors: active) {
+  select:not([multiple]) { appearance: auto; background-image: none; }
+}

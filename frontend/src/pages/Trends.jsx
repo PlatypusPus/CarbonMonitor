@@ -66,15 +66,12 @@ export default function Trends() {
           ))}
         </select>
 
-        <div className="flex overflow-hidden rounded-lg border border-line bg-surface">
+        <div className="interval-control" role="group" aria-label="Time grouping">
           {INTERVALS.map((iv) => (
             <button
               key={iv.value}
               aria-pressed={interval === iv.value}
               onClick={() => setInterval(iv.value)}
-              className={`px-3 py-2 text-sm font-medium transition-colors ${
-                interval === iv.value ? "bg-leaf text-white" : "text-body hover:bg-canvas"
-              }`}
             >
               {iv.label}
             </button>

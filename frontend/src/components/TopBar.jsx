@@ -20,9 +20,9 @@ export default function TopBar() {
         <span className="font-bold text-ink">CarbonTrace</span>
       </div>
       <div className="flex min-w-0 flex-wrap items-center gap-3">
-        <div className="flex items-center gap-2 rounded-lg border border-line bg-canvas px-3 py-2 text-sm">
+        <div className="flex min-w-0 items-center gap-2 text-sm">
           <Building2 size={16} className="shrink-0 text-leaf" />
-          {isAdmin ? <select aria-label="Workspace facility" value={facilityId} onChange={(e) => setFacilityId(e.target.value)} className="max-w-[200px] bg-transparent text-sm text-ink">
+          {isAdmin ? <select aria-label="Workspace facility" value={facilityId} onChange={(e) => setFacilityId(e.target.value)} className="w-[220px] min-w-0 font-semibold">
             <option value="">All facilities</option>
             {(facilities.data ?? []).map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}
           </select> : <span>{facilities.data?.find((f) => f.id === facilityId)?.name ?? (facilities.isLoading ? "Loading facility..." : "No facility assigned")}</span>}
