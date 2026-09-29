@@ -29,9 +29,9 @@ export default function TopBar() {
         </div>
         <div className="ml-auto flex items-center gap-3">
         <div className="hidden max-w-[160px] text-right text-xs lg:block"><p className="truncate font-semibold text-ink">{user?.full_name || user?.email}</p><p className="mt-1 flex items-center justify-end gap-1 text-muted"><ShieldCheck size={12} />{isAdmin ? "Administrator" : "Facility manager"}</p></div>
-        <div aria-hidden="true" className="hidden h-9 w-9 place-items-center rounded-full bg-mint text-sm font-semibold text-leaf-deep sm:grid">
+        <Link to="/profile" aria-label="Manage your account" className="grid h-9 w-9 place-items-center rounded-full bg-mint text-sm font-semibold text-leaf-deep">
           {initial}
-        </div>
+        </Link>
         <button
           onClick={logout}
           className="rounded-lg border border-line p-2 text-body transition-colors hover:bg-canvas"

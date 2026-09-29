@@ -1,6 +1,8 @@
 import { ArrowLeft, Eye, EyeOff, Leaf } from "lucide-react";
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
+import client from "../api/client";
+import { accountError } from "./Signup";
 
 import { useAuth } from "../context/AuthContext";
 import facilityHero from "../assets/carbontrace-facility-hero.png";
@@ -8,6 +10,8 @@ import facilityHero from "../assets/carbontrace-facility-hero.png";
 export default function Login() {
   const { login } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const [notice, setNotice] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPw, setShowPw] = useState(false);
@@ -20,9 +24,10 @@ export default function Login() {
     setSubmitting(true);
     try {
       await login(email, password);
-      navigate("/onboarding", { replace: true });
-    } catch {
-      setError("Incorrect email or password");
+      const destination = location.state?.returnTo;
+      navigate(destination?.startsWith('/join-organization#') ? destination : "/onboarding", { replace: true });
+    } catch (error) {
+      setError(accountError(error));
     } finally {
       setSubmitting(false);
     }
@@ -103,7 +108,13 @@ export default function Login() {
               {submitting ? "Signing in…" : "Sign in"}
             </button>
           </form>
-          <p className="mt-6 text-center text-sm leading-6 text-body">Need an account? Ask your administrator to assign your facility access.</p>
+          <p className="mt-6 text-center text-sm leading-6 text-body">New to CarbonTrace? <Link to="/signup" className="font-semibold text-leaf-action underline">Create an account</Link></p>
+          <button type="button" disabled={submitting || !email} className="mt-4 text-sm text-leaf-action underline disabled:opacity-50" onClick={async () => {
+            setSubmitting(true); setError(''); setNotice('');
+            try {const {data} = await client.post('/account/resend-verification', {email}); setNotice(data.message);}
+            catch(error) {setError(accountError(error));} finally {setSubmitting(false);}
+          }}>Resend email verification</button>
+          {notice && <p role="status" className="mt-3 text-sm text-leaf-action">{notice}</p>}
         </div>
       </div>
     </div>

@@ -15,7 +15,7 @@ export function AuthProvider({ children }) {
     if (attemptedRefresh.current) return;
     attemptedRefresh.current = true;
 
-    if (["/", "/login"].includes(window.location.pathname)) {
+    if (["/", "/login", "/signup", "/verify-email"].includes(window.location.pathname)) {
       setLoading(false);
       return;
     }
@@ -54,8 +54,13 @@ export function AuthProvider({ children }) {
     setUser(null);
   }
 
+  async function reloadUser() {
+    const { data } = await client.get("/auth/me");
+    setUser(data);
+  }
+
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, logout, reloadUser }}>
       {children}
     </AuthContext.Provider>
   );

@@ -5,7 +5,7 @@
 Run these commands from the repository root:
 
 ```sh
-docker compose up -d backend postgres
+docker compose up -d backend postgres mailpit
 cd frontend
 npm ci
 npm run dev
@@ -23,7 +23,15 @@ Copy `.env.example` to `.env` and configure its secrets before starting Docker. 
 docker compose exec backend python create_admin.py --email you@example.com --password "your-chosen-password" --role admin
 ```
 
-An existing email keeps its password. There is no public sign-up or default account.
+An existing email keeps its password. Users can also register at `/signup` and verify their email. See [accounts and organizations](access.md).
+
+## Email verification
+
+Development uses Mailpit at **http://localhost:8025**. Open it to read verification and invitation emails, then follow their links to port 5173. Messages stay local and are not delivered to external inboxes. The backend uses Python's standard SMTP library; no additional Node mail service is needed.
+
+For delivery to real inboxes, configure `.env` with your provider's `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD`, and authorized `SMTP_FROM` address. Set `SMTP_STARTTLS=true` for STARTTLS (usually port 587), or `SMTP_SSL=true` for implicit TLS (usually port 465). Set `PUBLIC_APP_URL` to the URL recipients should open. Restart with `docker compose up -d --build backend`. Never commit SMTP credentials.
+
+Production requires an HTTPS `PUBLIC_APP_URL`, TLS mail delivery, and a non-default JWT secret. Without working SMTP, signup fails clearly and rolls back the new account so the user can retry.
 
 ## Updates and stopping
 

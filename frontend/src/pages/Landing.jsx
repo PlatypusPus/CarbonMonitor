@@ -100,7 +100,7 @@ export default function Landing() {
             ].map(([question,answer]) => <details key={question} className="border-t border-line py-4"><summary className="cursor-pointer text-sm font-semibold text-ink">{question}</summary><p className="mt-3 text-sm leading-7 text-body">{answer}</p></details>)}
           </div>
         </section>
-        <section className="mx-auto max-w-7xl px-5 pb-16 md:px-8"><div className="flex flex-wrap items-center justify-between gap-6 rounded-2xl bg-[#E2EFE7] p-8 sm:p-10"><div><h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">Put your facility records to work.</h2><p className="mt-3 text-sm text-body">Sign in to your assigned workspace. New accounts are created by your administrator.</p></div><Link to="/login" className="inline-flex items-center gap-2 rounded-lg bg-leaf-action px-5 py-3 font-semibold text-white hover:bg-leaf-action-hover">Open workspace <ArrowRight size={18} /></Link></div></section>
+        <section className="mx-auto max-w-7xl px-5 pb-16 md:px-8"><div className="flex flex-wrap items-center justify-between gap-6 rounded-2xl bg-[#E2EFE7] p-8 sm:p-10"><div><h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">Put your facility records to work.</h2><p className="mt-3 text-sm text-body">Create a private workspace or join your team through an email invitation.</p></div><Link to="/signup" className="inline-flex items-center gap-2 rounded-lg bg-leaf-action px-5 py-3 font-semibold text-white hover:bg-leaf-action-hover">Create account <ArrowRight size={18} /></Link></div></section>
       </main>
 
       <footer className="mx-auto flex max-w-7xl flex-col gap-3 px-5 py-8 text-sm text-[#68736a] md:flex-row md:items-center md:justify-between md:px-8">

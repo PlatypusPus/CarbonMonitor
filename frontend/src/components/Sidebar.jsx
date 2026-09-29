@@ -1,4 +1,4 @@
-import { Activity, AlertTriangle, BarChart3, FileText, UploadCloud, SlidersHorizontal, Building2 } from "lucide-react";
+import { Activity, AlertTriangle, BarChart3, FileText, UploadCloud, SlidersHorizontal, Building2, UserRound } from "lucide-react";
 import { NavLink } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
@@ -9,6 +9,7 @@ const links = [
   { to: "/scenarios", label: "What-if scenarios", icon: SlidersHorizontal },
   { to: "/anomalies", label: "Anomaly review", icon: AlertTriangle },
   { to: "/esg-report", label: "Emissions report", icon: FileText },
+  { to: "/profile", label: "Your account", icon: UserRound },
 ];
 
 export default function Sidebar() {

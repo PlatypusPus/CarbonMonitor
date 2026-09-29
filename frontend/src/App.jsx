@@ -7,6 +7,9 @@ import Dashboard from "./pages/Dashboard";
 import ESGReport from "./pages/ESGReport";
 import Landing from "./pages/Landing";
 import Login from "./pages/Login";
+import Signup from "./pages/Signup";
+import AccountLink from "./pages/AccountLink";
+import Profile from "./pages/Profile";
 import Onboarding from "./pages/Onboarding";
 import Trends from "./pages/Trends";
 import Intake from "./pages/Intake";
@@ -25,6 +28,9 @@ export default function App() {
     <Routes>
       <Route path="/" element={<Landing />} />
       <Route path="/login" element={<Login />} />
+      <Route path="/signup" element={<Signup />} />
+      <Route path="/verify-email" element={<AccountLink />} />
+      <Route path="/join-organization" element={<AccountLink join />} />
       <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
       <Route
         element={
@@ -34,6 +40,7 @@ export default function App() {
         }
       >
         <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/profile" element={<Profile />} />
         <Route path="/trends" element={<Trends />} />
         <Route path="/scenarios" element={<Scenarios />} />
         <Route path="/administration" element={<Administration />} />

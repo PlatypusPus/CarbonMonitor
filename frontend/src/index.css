@@ -154,3 +154,6 @@ input:disabled {
 .skip-link { position: absolute; top: 8px; left: 8px; transform: translateY(-160%); z-index: 100; padding: 12px 18px; background: white; color: #20372c; border-radius: 8px; }
 .skip-link:focus { transform: translateY(0); }
 ::selection { background: #c9e6d5; color: #20372c; }
+.account-input { @apply mt-2 block w-full rounded-lg border border-line bg-white px-3 py-3 text-sm text-ink outline-none focus:border-leaf-action focus:ring-2 focus:ring-mint; }
+.account-primary { @apply min-h-11 rounded-lg bg-leaf-action px-5 py-3 text-center text-sm font-semibold text-white transition-colors hover:bg-leaf-action-hover disabled:opacity-50; }
+.account-section { @apply rounded-xl border border-line bg-surface p-5 sm:p-7; }
