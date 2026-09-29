@@ -6,6 +6,7 @@ must never move a dashboard or a report until a human approves them.
 """
 
 from typing import Any
+from datetime import datetime
 from uuid import UUID
 
 from sqlalchemy.orm import Session
@@ -16,6 +17,14 @@ from models.calculated_emission import CalculatedEmission
 CONFIRMED_ONLY = ActivityRecord.confirmed_by_user.is_(True)
 
 
+def _date_filters(start: datetime | None, end: datetime | None):
+    """Filter by reporting-period start, with an exclusive UTC end bound."""
+    return [clause for clause in (
+        ActivityRecord.period_start >= start if start else None,
+        ActivityRecord.period_start < end if end else None,
+    ) if clause is not None]
+
+
 def query_latest(
     db: Session,
     metric: str | None = None,
@@ -23,6 +32,8 @@ def query_latest(
     facility: str | None = None,
     limit: int = 20,
     facility_id: UUID | None = None,
+    start: datetime | None = None,
+    end: datetime | None = None,
 ) -> list[dict[str, Any]]:
     """Latest calculated emissions, newest first."""
     from models.facility import Facility
@@ -38,7 +49,7 @@ def query_latest(
         q = q.filter(ActivityRecord.source == source)
     if facility:
         q = q.filter(Facility.name == facility)
-    q = q.order_by(ActivityRecord.period_start.desc(), CalculatedEmission.calculated_at.desc()).limit(limit)
+    q = q.filter(*_date_filters(start, end)).order_by(ActivityRecord.period_start.desc(), CalculatedEmission.calculated_at.desc()).limit(limit)
     return [
         {
             "timestamp": ar.period_start,
@@ -67,6 +78,8 @@ def query_timeseries(
     interval: str = "1h",
     source: str | list[str] | None = None,
     facility_id: UUID | None = None,
+    start: datetime | None = None,
+    end: datetime | None = None,
 ) -> list[dict[str, Any]]:
     """Aggregate co2e_kg by time bucket (period_start)."""
     from sqlalchemy import func, text
@@ -95,6 +108,7 @@ def query_timeseries(
         .join(ActivityRecord, CalculatedEmission.activity_record_id == ActivityRecord.id)
         .filter(ActivityRecord.activity_type == metric)
         .filter(CONFIRMED_ONLY)
+        .filter(*_date_filters(start, end))
         .group_by(text("bucket"))
         .order_by(text("bucket"))
     )
@@ -172,7 +186,8 @@ def query_crossverify(
     return out
 
 
-def query_summary(db: Session, facility_id: UUID | None = None) -> list[dict[str, Any]]:
+def query_summary(db: Session, facility_id: UUID | None = None,
+                  start: datetime | None = None, end: datetime | None = None) -> list[dict[str, Any]]:
     """Aggregate co2e_kg by activity_type with chronological latest."""
     from sqlalchemy import func
 
@@ -186,6 +201,7 @@ def query_summary(db: Session, facility_id: UUID | None = None) -> list[dict[str
         .join(ActivityRecord, CalculatedEmission.activity_record_id == ActivityRecord.id)
         .filter(CONFIRMED_ONLY)
         .filter(ActivityRecord.facility_id == facility_id if facility_id is not None else True)
+        .filter(*_date_filters(start, end))
         .group_by(ActivityRecord.activity_type)
         .all()
     )
@@ -199,6 +215,7 @@ def query_summary(db: Session, facility_id: UUID | None = None) -> list[dict[str
         .join(ActivityRecord, CalculatedEmission.activity_record_id == ActivityRecord.id)
         .filter(CONFIRMED_ONLY)
         .filter(ActivityRecord.facility_id == facility_id if facility_id is not None else True)
+        .filter(*_date_filters(start, end))
         .distinct(ActivityRecord.activity_type)
         .order_by(ActivityRecord.activity_type, ActivityRecord.period_start.desc(), CalculatedEmission.calculated_at.desc())
         .all()

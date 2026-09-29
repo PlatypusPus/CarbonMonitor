@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 
 import { useSummary, useTimeseries } from "../api/hooks";
+import DateRange from "../components/DateRange";
 
 const INTERVALS = [
   { label: "1 month", value: "1mo" },
@@ -28,9 +29,7 @@ export default function Trends() {
   const [metric, setMetric] = useState("electricity");
   const [interval, setInterval] = useState("1mo");
 
-  // sync default when summary loads and current metric not in list
-  const activeMetric = metrics.find((m) => m.metric === metric)?.metric ?? metrics[0]?.metric ?? metric;
-  const effectiveMetric = activeMetric !== metric ? activeMetric : metric;
+  const effectiveMetric = metric;
   const series = useTimeseries({ metric: effectiveMetric, interval });
   const points = (series.data ?? []).map((p) => ({ t: time(p.timestamp, interval), value: p.value }));
   const unitLabel = metrics.find((m) => m.metric === effectiveMetric)?.unit ?? "";
@@ -51,16 +50,18 @@ export default function Trends() {
         </button>
       </div>
 
+      <DateRange />
       <div className="flex flex-wrap items-center gap-3">
+        <span className="text-sm text-muted">Group by</span>
         <select
           aria-label="Activity type"
           value={effectiveMetric}
           onChange={(e) => setMetric(e.target.value)}
           className="rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink outline-none focus:border-leaf"
         >
-          {metrics.map((m) => (
-            <option key={m.metric} value={m.metric}>
-              {m.metric}
+          {['electricity', 'diesel', 'petrol', 'lpg'].map((type) => (
+            <option key={type} value={type}>
+              {type} (Scope {type === 'electricity' ? '2' : '1'})
             </option>
           ))}
         </select>
@@ -69,6 +70,7 @@ export default function Trends() {
           {INTERVALS.map((iv) => (
             <button
               key={iv.value}
+              aria-pressed={interval === iv.value}
               onClick={() => setInterval(iv.value)}
               className={`px-3 py-2 text-sm font-medium transition-colors ${
                 interval === iv.value ? "bg-leaf text-white" : "text-body hover:bg-canvas"
@@ -134,9 +136,9 @@ export default function Trends() {
             <thead>
               <tr className="border-b border-line bg-canvas text-left">
                 <th className="px-4 py-3 font-semibold text-ink">Metric</th>
-                <th className="px-4 py-3 font-semibold text-ink">Latest</th>
-                <th className="px-4 py-3 font-semibold text-ink">Avg</th>
-                <th className="px-4 py-3 font-semibold text-ink">Readings</th>
+                <th className="px-4 py-3 font-semibold text-ink">Latest record</th>
+                <th className="px-4 py-3 font-semibold text-ink">Avg per record</th>
+                <th className="px-4 py-3 font-semibold text-ink">Records in date range</th>
               </tr>
             </thead>
             <tbody>

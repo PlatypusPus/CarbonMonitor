@@ -9,8 +9,10 @@ const get = (url, params) => () => client.get(url, { params }).then((r) => r.dat
 const live = { refetchInterval: 30000 };
 
 function useScopedQuery(key, url, params, options = {}) {
-  const { facilityId } = useWorkspace();
-  const scoped = { ...params, facility_id: facilityId || undefined };
+  const { facilityId, dates } = useWorkspace();
+  const dateParams = ["summary", "latest", "timeseries"].includes(key)
+    ? { start_date: dates.start_date || undefined, end_date: dates.end_date || undefined } : {};
+  const scoped = { ...params, ...dateParams, facility_id: facilityId || undefined };
   return useQuery({ queryKey: [key, scoped], queryFn: get(url, scoped), ...options });
 }
 

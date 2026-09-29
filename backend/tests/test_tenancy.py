@@ -95,6 +95,13 @@ def test_facility_isolation_and_admin_user_lifecycle():
             assert client.post("/api/upload", headers=mh, data={"facility_id": str(beta.id)}, files=csv).status_code == 403
             assert client.get("/api/emissions/latest", headers=mh).json()[0]["value"] == 82
             assert client.get("/api/emissions/summary", headers=mh).json()[0]["count"] == 1
+            for route in ["/api/emissions/latest", "/api/emissions/summary"]:
+                included = client.get(route, headers=mh, params={"start_date": "2026-01-01", "end_date": "2026-01-01"})
+                assert included.status_code == 200 and len(included.json()) == 1
+                excluded = client.get(route, headers=mh, params={"start_date": "2026-01-02"})
+                assert excluded.status_code == 200 and excluded.json() == []
+                assert client.get(route, headers=mh, params={"start_date": "2026-02-01", "end_date": "2026-01-01"}).status_code == 422
+            assert client.get("/api/emissions/timeseries", headers=mh, params={"metric": "electricity", "start_date": "2026-02-01", "end_date": "2026-01-01"}).status_code == 422
             for route in ["/api/emissions/summary", "/api/emissions/latest", "/api/anomalies", "/api/reports/esg", "/api/activity/drafts"]:
                 assert client.get(route, params={"facility_id": str(beta.id)}, headers=mh).status_code == 403
                 assert client.get(route, headers=uh).status_code == 403

@@ -1,4 +1,6 @@
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { useState } from "react";
+import DateRange from "../components/DateRange";
 
 import { useAnomalies, useLatest, useSummary, useTimeseries } from "../api/hooks";
 
@@ -90,11 +92,12 @@ function SensorFeed({ feed }) {
 
 export default function Dashboard() {
   const summary = useSummary();
+  const [metric, setMetric] = useState("electricity");
   const anomalies = useAnomalies({ limit: 200 });
   // metric matches ActivityRecord.activity_type (electricity/diesel/...)
-  const defaultMetric = summary.data?.[0]?.metric ?? "electricity";
+  const defaultMetric = metric;
   const series = useTimeseries({ metric: defaultMetric, interval: "1mo" });
-  const feed = useLatest({ limit: 12 });
+  const feed = useLatest({ metric: defaultMetric, limit: 200 });
 
   const metrics = (summary.data ?? []).slice(0, 3);
 
@@ -108,6 +111,10 @@ export default function Dashboard() {
         <LivePill />
       </div>
 
+      <DateRange />
+      <label className="text-sm text-body">Chart and activity type <select aria-label="Chart and activity type" className="ml-2 rounded-lg border border-line bg-surface px-3 py-2" value={metric} onChange={(e) => setMetric(e.target.value)}>
+        {['electricity', 'diesel', 'petrol', 'lpg'].map((type) => <option key={type} value={type}>{type} (Scope {type === 'electricity' ? '2' : '1'})</option>)}
+      </select></label>
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <StatCard label={`Total ${defaultMetric} emissions`} value={series.data ? fmt(series.data.reduce((total, row) => total + (row.value ?? 0), 0)) : "-"} unit="kg CO2e" />
         {metrics.map((m) => (
@@ -115,7 +122,7 @@ export default function Dashboard() {
         ))}
         <StatCard label="Confirmed records" value={summary.data ? summary.data.reduce((total, item) => total + item.count, 0) : "-"} />
         <StatCard
-          label="Flagged records"
+          label="Flagged records (all dates)"
           value={anomalies.data?.length ?? "-"}
           unit="flags"
           accent="peach"
