@@ -3,6 +3,7 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
 import { useAuth } from "../context/AuthContext";
+import facilityHero from "../assets/carbontrace-facility-hero.png";
 
 export default function Login() {
   const { login } = useAuth();
@@ -30,32 +31,32 @@ export default function Login() {
   return (
     <div className="grid min-h-screen lg:grid-cols-2">
       {/* Brand panel */}
-      <div className="relative hidden flex-col overflow-hidden bg-gradient-to-br from-[#23895A] via-leaf to-[#3FB079] p-14 text-white lg:flex">
-        <div className="absolute -right-20 -top-24 h-80 w-80 rounded-full bg-white/[0.08]" />
-        <div className="absolute -bottom-32 -left-24 h-96 w-96 rounded-full bg-white/[0.06]" />
+      <div className="relative hidden flex-col overflow-hidden bg-[#204B36] p-12 text-white lg:flex xl:p-16">
         <div className="relative flex w-fit items-center gap-3">
           <div className="grid h-11 w-11 place-items-center rounded-xl border border-white/30 bg-white/20">
             <Leaf size={26} />
           </div>
           <span className="text-2xl font-bold tracking-tight">CarbonTrace</span>
         </div>
-        <div className="relative my-auto max-w-lg">
-          <h2 className="text-5xl font-bold leading-tight tracking-tight">
-            Every emission, accounted for.
+        <div className="relative mb-8 mt-16 max-w-lg">
+          <h2 className="text-4xl font-semibold leading-[1.12] tracking-tight xl:text-5xl">
+            A clearer view of your facility's footprint.
           </h2>
-          <p className="mt-6 text-xl leading-relaxed text-white/90">
-            Log in to monitor live facility data, investigate anomalies, and generate
-            audit-ready compliance reports.
+          <p className="mt-5 max-w-md text-base leading-7 text-white/80">
+            Bring electricity and fuel records together. Review emissions, compare periods, and plan your next reduction.
           </p>
         </div>
+        <figure className="mt-auto overflow-hidden rounded-xl"><img src={facilityHero} alt="Solar panels on a facility surrounded by trees" className="aspect-[16/9] w-full object-cover" /></figure>
+        <p className="mt-5 text-xs text-white/70">Scope 1 and 2 accounting for facility teams.</p>
       </div>
 
       {/* Form panel */}
-      <div className="flex items-center justify-center bg-surface px-10 py-12">
-        <div className="w-full max-w-sm">
+      <div className="flex items-center justify-center bg-surface px-6 py-10 sm:px-12">
+        <div className="w-full max-w-md">
+          <div className="mb-10 flex items-center gap-2 font-bold text-ink lg:hidden"><Leaf className="text-leaf-action" size={24} />CarbonTrace</div>
           <Link to="/" className="mb-8 inline-flex items-center gap-2 text-sm font-semibold text-body hover:text-leaf"><ArrowLeft size={16} /> Back to home</Link>
-          <h1 className="text-3xl font-bold tracking-tight text-ink">Welcome back</h1>
-          <p className="mb-9 mt-2 text-lg text-body">Sign in to your CarbonTrace workspace.</p>
+          <h1 className="text-4xl font-semibold tracking-tight text-ink">Welcome back.</h1>
+          <p className="mb-9 mt-3 text-base text-body">Sign in to manage your facility's emissions.</p>
 
           <form onSubmit={handleSubmit} className="flex flex-col">
             <label htmlFor="email" className="mb-2 text-sm font-semibold text-ink">Work email</label>
@@ -92,7 +93,7 @@ export default function Login() {
               </button>
             </div>
 
-            {error && <p className="mb-4 text-sm text-rose">{error}</p>}
+            {error && <p role="alert" className="mb-4 rounded-lg border border-rose/30 bg-rose/5 p-3 text-sm text-[#A62F38]">{error}</p>}
 
             <button
               type="submit"
@@ -102,6 +103,7 @@ export default function Login() {
               {submitting ? "Signing in…" : "Sign in"}
             </button>
           </form>
+          <p className="mt-6 text-center text-sm leading-6 text-body">Need an account? Ask your administrator to assign your facility access.</p>
         </div>
       </div>
     </div>

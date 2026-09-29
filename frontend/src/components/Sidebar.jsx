@@ -3,43 +3,44 @@ import { NavLink } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
 const links = [
-  { to: "/upload", label: "Data Intake", icon: UploadCloud },
   { to: "/dashboard", label: "Overview", icon: Activity, end: true },
-  { to: "/trends", label: "Trends & Analytics", icon: BarChart3 },
-  { to: "/scenarios", label: "What-if Scenarios", icon: SlidersHorizontal },
-  { to: "/anomalies", label: "Anomaly Log", icon: AlertTriangle },
-  { to: "/esg-report", label: "ESG Report", icon: FileText },
+  { to: "/upload", label: "Data intake", icon: UploadCloud },
+  { to: "/trends", label: "Trends & analytics", icon: BarChart3 },
+  { to: "/scenarios", label: "What-if scenarios", icon: SlidersHorizontal },
+  { to: "/anomalies", label: "Anomaly review", icon: AlertTriangle },
+  { to: "/esg-report", label: "Emissions report", icon: FileText },
 ];
 
 export default function Sidebar() {
   const { user } = useAuth();
   const navigation = [...links, { to: "/administration", label: user?.role === "admin" ? "Facilities & users" : "My facility", icon: Building2 }];
   return (
-    <aside className="hidden w-[216px] shrink-0 flex-col border-r border-line bg-sidebar p-4 md:flex">
-      <p className="px-2 py-2 text-xs font-semibold uppercase tracking-wider text-muted">
-        Navigation
+    <aside className="workspace-sidebar hidden w-[232px] shrink-0 flex-col p-4 md:flex">
+      <p className="px-3 pb-4 pt-3 text-xs font-semibold text-white/70">
+        Your workspace
       </p>
-      <nav className="flex flex-col gap-1">
+      <nav aria-label="Workspace navigation" className="flex flex-col gap-1.5">
         {navigation.map(({ to, label, icon: Icon, end }) => (
           <NavLink
             key={to}
             to={to}
             end={end}
             className={({ isActive }) =>
-              `flex items-center gap-3 rounded-lg border-l-4 py-2 pl-2 pr-3 text-sm font-medium transition-colors ${
+              `flex min-h-12 items-center gap-3 rounded-lg px-3 py-3 text-sm font-medium transition-colors ${
                 isActive
-                  ? "border-leaf bg-[#E2EFE7] text-leaf-deep"
-                  : "border-transparent text-body hover:bg-[#E5EFE9]"
+                  ? "bg-[#DAEDE2] text-[#195A3C] shadow-sm"
+                  : "text-white/80 hover:bg-white/10 hover:text-white"
               }`
             }
           >
-            <span className="grid h-8 w-8 place-items-center rounded-lg bg-surface">
-              <Icon size={16} />
+            <span className="grid w-5 shrink-0 place-items-center">
+              <Icon size={18} />
             </span>
             {label}
           </NavLink>
         ))}
       </nav>
+      <div className="mt-auto px-3 pb-3 pt-16 text-xs leading-6 text-white/70"><p className="font-semibold text-white">Know your footprint.</p><p>Review activity. Track change.<br />Make informed decisions.</p></div>
     </aside>
   );
 }

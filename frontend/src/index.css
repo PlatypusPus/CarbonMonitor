@@ -4,6 +4,8 @@
 
 body {
   @apply bg-canvas font-sans text-body;
+  -webkit-font-smoothing: antialiased;
+  font-variant-numeric: tabular-nums;
 }
 
 html {
@@ -134,3 +136,16 @@ input:disabled {
 }
 .dropdown-option:hover, .dropdown-option:focus-visible { @apply bg-canvas; }
 .dropdown-option[aria-pressed="true"] { @apply bg-mint font-semibold text-leaf-action; }
+
+.workspace-sidebar { background: #204b36; }
+.workspace-main h1 { font-size: clamp(1.65rem, 2.3vw, 2.15rem); letter-spacing: -0.035em; line-height: 1.2; }
+.workspace-main h2 { letter-spacing: -0.02em; }
+.workspace-main input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]) {
+  min-height: 44px;
+}
+.workspace-main table th { font-size: 0.75rem; font-weight: 600; color: #52675b; }
+.workspace-main table tbody tr:hover { background-color: #f5f9f6; }
+.workspace-main .shadow-card { box-shadow: 0 2px 6px rgb(32 55 44 / 4%); }
+.skip-link { position: absolute; top: 8px; left: 8px; transform: translateY(-160%); z-index: 100; padding: 12px 18px; background: white; color: #20372c; border-radius: 8px; }
+.skip-link:focus { transform: translateY(0); }
+::selection { background: #c9e6d5; color: #20372c; }

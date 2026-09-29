@@ -1,4 +1,4 @@
-import { Building2, LogOut, ShieldCheck } from "lucide-react";
+import { Building2, LogOut, ShieldCheck, Leaf } from "lucide-react";
 
 import { useAuth } from "../context/AuthContext";
 import { useWorkspace } from "../context/WorkspaceContext";
@@ -13,12 +13,13 @@ export default function TopBar() {
   const initial = user?.email?.[0]?.toUpperCase() ?? "?";
 
   return (
-    <header className="flex shrink-0 flex-wrap items-center justify-between gap-4 border-b border-line bg-surface px-4 py-4 md:px-6">
+    <header className="workspace-header relative z-30 flex shrink-0 flex-wrap items-center justify-between gap-4 border-b border-line bg-surface px-4 py-4 md:px-6">
+      <a href="#main-content" className="skip-link">Skip to content</a>
       <div className="flex items-center gap-2">
-        <div className="grid h-8 w-8 place-items-center rounded-lg bg-leaf text-sm font-bold text-white">
-          C
+        <div className="grid h-10 w-10 place-items-center rounded-xl bg-leaf-action text-white">
+          <Leaf size={22} aria-hidden="true" />
         </div>
-        <span className="font-bold text-ink">CarbonTrace</span>
+        <div><span className="text-lg font-bold tracking-tight text-ink">CarbonTrace</span><p className="text-xs text-body">Facility emissions workspace</p></div>
       </div>
       <div className="flex min-w-0 flex-wrap items-center gap-3">
         <div className="flex min-w-0 items-center gap-2 text-sm">

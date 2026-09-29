@@ -1,5 +1,6 @@
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import DateRange from "../components/DateRange";
 import Dropdown from "../components/Dropdown";
 import { formatNumber as fmt } from "../lib/trends";
@@ -11,18 +12,18 @@ const time = (ts) => new Date(ts).toLocaleDateString([], { year: "numeric", mont
 function LivePill() {
   return (
     <span className="inline-flex items-center gap-2 rounded-pill border border-mint bg-[#E8F3EC] px-3 py-1 text-xs font-semibold text-leaf">
-      <span className="h-1.5 w-1.5 animate-pulse-dot rounded-full bg-leaf" />
-      CONFIRMED DATA
+      <span className="h-1.5 w-1.5 rounded-full bg-leaf-action" />
+      Confirmed records
     </span>
   );
 }
 
 function StatCard({ label, value, unit, accent = "mint" }) {
-  const border = accent === "peach" ? "border-l-peach" : "border-l-mint";
+  const border = accent === "peach" ? "border-t-peach" : "border-t-mint";
   return (
-    <div className={`rounded-card border border-line border-l-4 ${border} bg-surface p-4`}>
+    <div className={`rounded-card border border-line border-t-2 ${border} bg-surface p-5`}>
       <div className="text-xs text-muted">{label}</div>
-      <div className="mt-1 font-mono text-2xl text-ink">
+      <div className="mt-3 text-2xl font-semibold tabular-nums tracking-tight text-ink">
         {value}
         {unit && <span className="ml-1 text-xs text-muted">{unit}</span>}
       </div>
@@ -104,12 +105,12 @@ export default function Dashboard() {
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="flex items-start justify-between">
+      <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-ink">Emissions overview</h1>
           <p className="text-sm text-muted">Confirmed activity records and monthly emissions</p>
         </div>
-        <LivePill />
+        <div className="flex flex-wrap items-center gap-3"><LivePill /><Link to="/upload" className="rounded-lg bg-leaf-action px-4 py-3 text-sm font-semibold text-white hover:bg-leaf-action-hover">Add activity</Link></div>
       </div>
 
       <DateRange />

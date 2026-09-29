@@ -11,13 +11,13 @@ function WorkspaceContent() {
 
 export default function Layout() {
   return (
-    <WorkspaceProvider><div className="flex min-h-screen flex-col">
+    <WorkspaceProvider><div className="workspace-shell flex min-h-screen flex-col">
       <TopBar />
       <MobileNavigation />
       <div className="flex flex-1">
         <Sidebar />
-        <main className="min-w-0 flex-1 overflow-auto bg-[#FBFCFB] p-4 md:p-8">
-          <WorkspaceContent />
+        <main id="main-content" tabIndex={-1} className="workspace-main min-w-0 flex-1 bg-canvas p-4 md:p-7 lg:p-10">
+          <div className="mx-auto w-full max-w-[1440px]"><WorkspaceContent /></div>
         </main>
       </div>
     </div></WorkspaceProvider>
