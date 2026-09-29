@@ -6,7 +6,7 @@ Each facility is an isolated workspace in the shared database. A facility manage
 
 1. Sign in and open **Facilities & users**.
 2. Use **Add facility** to create a site and enter its location, type, and optional region code.
-3. Open **Users & access**, choose **Add user**, and supply a name, email, initial password, role, and facility assignment.
+3. Open **Users & access**, choose **Add user**, and supply a name, email, and initial password. New managers get a new empty facility by default. Select an existing facility only when the manager should share its historical records. Administrators deliberately retain access to all facilities.
 4. Share sign-in details privately. Passwords are hashed and are never returned by the API.
 5. Use **Edit** to change a name, role, facility assignment, or active status. Deactivation blocks API access and login. Changes to permissions revoke refresh sessions. An administrator cannot disable or demote their own account.
 
@@ -19,5 +19,7 @@ Managers sign in with their individual account, upload to their assigned facilit
 Reassigning a manager changes their access immediately on the backend. Their previous uploads stay with the original facility. Accounts without a facility assignment cannot access aggregate reports; an administrator must assign them first. Reload or sign in again after an assignment changes to refresh the displayed workspace.
 
 ## Verification
+
+Startup never assigns accounts to an existing facility. The CLI defaults to a facility manager with a new empty facility; use `--role admin` explicitly to create an administrator. Existing assignments are preserved and must be reviewed in **Users & access** if an older account was assigned incorrectly.
 
 `backend/tests/test_tenancy.py` covers account creation, duplicate emails, login, assignment changes, deactivation, cross-facility reads and writes, shared draft confirmation, and PDF isolation. The PostgreSQL upload integration tests verify independent manager uploads and facility-scoped monthly aggregates. Test data belongs only in `carbontrace_e2e`, never in the college database.

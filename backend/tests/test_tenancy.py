@@ -2,6 +2,7 @@
 
 from datetime import datetime
 from io import BytesIO
+from unittest.mock import patch
 
 from fastapi.testclient import TestClient
 from pypdf import PdfReader
@@ -51,6 +52,12 @@ def test_facility_isolation_and_admin_user_lifecycle():
             records.append(record)
             drafts.append(draft)
         db.commit()
+        # Restart seeding must never attach an unassigned account to old data.
+        with patch("database.SessionLocal", lambda: Session(engine)):
+            from database import _seed_defaults
+            _seed_defaults()
+        db.refresh(unassigned)
+        assert unassigned.facility_id is None
         def session():
             yield db
         app.dependency_overrides[get_db] = session
@@ -59,6 +66,18 @@ def test_facility_isolation_and_admin_user_lifecycle():
             return {"Authorization": "Bearer " + create_access_token(str(user.id), user.role.name)}
         ah, mh, uh = headers(admin), headers(manager), headers(unassigned)
         try:
+            # Default account creation gets a fresh workspace, even with old records present.
+            fresh = client.post("/api/users", headers=ah, json={
+                "email": "fresh@example.com", "full_name": "Fresh manager", "password": "fresh-password",
+            })
+            assert fresh.status_code == 201, fresh.text
+            assert fresh.json()["facility_id"] not in (str(alpha.id), str(beta.id), None)
+            signed_in = client.post("/api/auth/login", json={"email": "fresh@example.com", "password": "fresh-password"})
+            fresh_headers = {"Authorization": "Bearer " + signed_in.json()["access_token"]}
+            for route in ["/api/activity", "/api/activity/drafts", "/api/emissions/summary", "/api/emissions/latest", "/api/anomalies"]:
+                response = client.get(route, headers=fresh_headers)
+                assert response.status_code == 200, response.text
+                assert response.json() == [], (route, response.text)
             assert client.get("/api/users", headers=mh).status_code == 403
             assert client.post("/api/facilities", headers=mh, json={"name": "Escape"}).status_code == 403
             assert [r["id"] for r in client.get("/api/facilities", headers=mh).json()] == [str(alpha.id)]

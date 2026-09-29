@@ -234,23 +234,10 @@ def _seed_roles() -> None:
 
 
 def _seed_defaults() -> None:
-    """Seed default facility + electricity emission factor; assign unassigned users."""
+    """Seed emission factors without changing facility memberships."""
     from models.emission_factor import EmissionFactor
-    from models.facility import Facility
-    from models.user import User
 
     with SessionLocal() as db:
-        # default facility
-        fac = db.query(Facility).first()
-        if fac is None:
-            fac = Facility(name="HQ")
-            db.add(fac)
-            db.flush()
-
-        # assign admin user to HQ
-        for u in db.query(User).filter(User.facility_id.is_(None)).all():
-            u.facility_id = fac.id
-
         # emission factors (placeholders — replace with DEFRA/EPA authoritative values)
         defaults = [
             ("electricity", 0.82, "kg CO2e / kWh"),

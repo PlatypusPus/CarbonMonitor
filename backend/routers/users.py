@@ -42,9 +42,15 @@ def create_user(payload: UserCreate, db: Session = Depends(get_db),
     email = str(payload.email).strip().lower()
     if db.query(User).filter(func.lower(User.email) == email).first():
         raise HTTPException(409, "An account with this email already exists")
-    role = validate_membership(db, payload.role, payload.facility_id)
+    facility_id = payload.facility_id
+    if payload.role == "facility_manager" and facility_id is None:
+        facility = Facility(name=f"{payload.full_name}'s facility")
+        db.add(facility)
+        db.flush()
+        facility_id = facility.id
+    role = validate_membership(db, payload.role, facility_id)
     user = User(email=email, full_name=payload.full_name, hashed_password=hash_password(payload.password),
-                role_id=role.id, facility_id=payload.facility_id, is_active=True)
+                role_id=role.id, facility_id=facility_id, is_active=True)
     db.add(user)
     try:
         db.commit()
