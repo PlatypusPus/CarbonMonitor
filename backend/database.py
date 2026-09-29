@@ -26,11 +26,43 @@ def get_db() -> Generator[Session, None, None]:
 
 def init_db() -> None:
     import models  # noqa: F401
+    from sqlalchemy import text
 
-    Base.metadata.create_all(bind=engine)
-    _ensure_ingest_schema()
-    _seed_roles()
-    _seed_defaults()
+    # Uvicorn workers must not migrate or seed the same database concurrently.
+    with engine.connect() as lock:
+        postgres = engine.dialect.name == 'postgresql'
+        if postgres:
+            lock.execute(text('SELECT pg_advisory_lock(73641920)'))
+        try:
+            Base.metadata.create_all(bind=engine)
+            _ensure_account_schema()
+            _ensure_ingest_schema()
+            _seed_roles()
+            _seed_defaults()
+        finally:
+            if postgres:
+                lock.execute(text('SELECT pg_advisory_unlock(73641920)'))
+
+
+def _ensure_account_schema() -> None:
+    """One-time adoption of legacy data into its own organization."""
+    from sqlalchemy import inspect, text
+    import uuid
+    with engine.begin() as connection:
+        columns = {c["name"] for c in inspect(connection).get_columns("users")}
+        legacy = "organization_id" not in columns
+        if legacy:
+            connection.execute(text("ALTER TABLE users ADD COLUMN organization_id UUID REFERENCES organizations(id)"))
+        for name, definition in [("email_verified", "BOOLEAN NOT NULL DEFAULT true"), ("last_login_at", "TIMESTAMP WITH TIME ZONE"), ("auth_version", "INTEGER NOT NULL DEFAULT 0")]:
+            if name not in columns:
+                connection.execute(text(f"ALTER TABLE users ADD COLUMN {name} {definition}"))
+        if "organization_id" not in {c["name"] for c in inspect(connection).get_columns("facilities")}:
+            connection.execute(text("ALTER TABLE facilities ADD COLUMN organization_id UUID REFERENCES organizations(id)"))
+        if legacy:
+            organization_id = str(uuid.uuid4())
+            connection.execute(text("INSERT INTO organizations (id, name) VALUES (:id, 'College organization')"), {"id": organization_id})
+            connection.execute(text("UPDATE users SET organization_id=:id"), {"id": organization_id})
+            connection.execute(text("UPDATE facilities SET organization_id=:id"), {"id": organization_id})
 
 
 def _backfill_missing_emissions() -> None:

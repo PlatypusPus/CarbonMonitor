@@ -13,6 +13,7 @@ from models.user import User
 from models.recommendation import Recommendation
 from schemas.recommendation import RecommendationResponse
 from services.recommendations import evaluate_rules
+from services.scope import scope_filter
 
 router = APIRouter()
 
@@ -26,12 +27,12 @@ def list_recommendations(
 ) -> Any:
     if facility_id:
         check_facility_access(current_user, facility_id)
-    elif current_user.role.name != "admin":
+    else:
         facility_id = facility_scope(None, current_user)
 
     stmt = select(Recommendation)
-    if facility_id:
-        stmt = stmt.where(Recommendation.facility_id == facility_id)
+    if facility_id is not None:
+        stmt = stmt.where(scope_filter(Recommendation.facility_id, facility_id))
     if period_id:
         stmt = stmt.where(Recommendation.period_id == period_id)
     return db.execute(stmt).scalars().all()

@@ -11,6 +11,7 @@ from models.scenario import Scenario
 from models.session import UserSession
 from models.upload import Upload
 from models.user import User
+from models.organization import Organization, EmailToken
 
 __all__ = [
     "ActivityRecord",

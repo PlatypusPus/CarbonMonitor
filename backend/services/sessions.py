@@ -56,7 +56,7 @@ def rotate_refresh_token(db: Session, raw_token: str) -> tuple[User, str] | None
         return None
     session.revoked = True
     user = db.get(User, session.user_id)
-    if user is None:
+    if user is None or not user.is_active or not user.email_verified:
         return None
     new_token = _add_session(db, session.user_id)
     db.commit()

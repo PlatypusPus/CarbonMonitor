@@ -46,3 +46,7 @@ class UserResponse(BaseModel):
     facility_id: uuid.UUID | None
     is_active: bool
     created_at: datetime
+    organization_id: uuid.UUID | None = None
+    organization_name: str | None = None
+    email_verified: bool = True
+    last_login_at: datetime | None = None

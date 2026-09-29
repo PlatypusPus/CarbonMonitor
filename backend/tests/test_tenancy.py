@@ -126,6 +126,9 @@ def test_facility_isolation_and_admin_user_lifecycle():
             nh = {"Authorization": "Bearer " + signed_in.json()["access_token"]}
             assert client.get("/api/activity", headers=nh).json()[0]["facility_id"] == str(beta.id)
             assert client.patch(f"/api/users/{new_id}", headers=ah, json={"facility_id": str(alpha.id)}).status_code == 200
+            assert client.get("/api/activity", headers=nh).status_code == 401
+            signed_in = client.post("/api/auth/login", json={"email": "new@example.com", "password": "new-password"})
+            nh = {"Authorization": "Bearer " + signed_in.json()["access_token"]}
             assert client.get("/api/activity", headers=nh).json()[0]["facility_id"] == str(alpha.id)
             assert client.patch(f"/api/users/{new_id}", headers=ah, json={"is_active": False}).status_code == 200
             assert client.get("/api/activity", headers=nh).status_code == 401

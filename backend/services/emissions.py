@@ -8,6 +8,7 @@ must never move a dashboard or a report until a human approves them.
 from typing import Any
 from datetime import datetime
 from uuid import UUID
+from services.scope import scope_filter
 
 from sqlalchemy.orm import Session
 
@@ -42,7 +43,7 @@ def query_latest(
         ActivityRecord, CalculatedEmission.activity_record_id == ActivityRecord.id
     ).outerjoin(Facility, ActivityRecord.facility_id == Facility.id).filter(CONFIRMED_ONLY)
     if facility_id is not None:
-        q = q.filter(ActivityRecord.facility_id == facility_id)
+        q = q.filter(scope_filter(ActivityRecord.facility_id, facility_id))
     if metric:
         q = q.filter(ActivityRecord.activity_type == metric)
     if source:
@@ -113,7 +114,7 @@ def query_timeseries(
         .order_by(text("bucket"))
     )
     if facility_id is not None:
-        q = q.filter(ActivityRecord.facility_id == facility_id)
+        q = q.filter(scope_filter(ActivityRecord.facility_id, facility_id))
     if source:
         if isinstance(source, list):
             q = q.filter(ActivityRecord.source.in_(source))
@@ -168,7 +169,7 @@ def query_crossverify(
         .order_by(text("bucket"))
     )
     if facility_id is not None:
-        live_q = live_q.filter(ActivityRecord.facility_id == facility_id)
+        live_q = live_q.filter(scope_filter(ActivityRecord.facility_id, facility_id))
     live_map = {r.bucket: float(r.value) for r in live_q.all()}
     upload_map = {r["timestamp"]: r["value"] for r in upload_rows.values()}
 
@@ -200,7 +201,7 @@ def query_summary(db: Session, facility_id: UUID | None = None,
         )
         .join(ActivityRecord, CalculatedEmission.activity_record_id == ActivityRecord.id)
         .filter(CONFIRMED_ONLY)
-        .filter(ActivityRecord.facility_id == facility_id if facility_id is not None else True)
+        .filter(scope_filter(ActivityRecord.facility_id, facility_id) if facility_id is not None else True)
         .filter(*_date_filters(start, end))
         .group_by(ActivityRecord.activity_type)
         .all()
@@ -214,7 +215,7 @@ def query_summary(db: Session, facility_id: UUID | None = None,
         )
         .join(ActivityRecord, CalculatedEmission.activity_record_id == ActivityRecord.id)
         .filter(CONFIRMED_ONLY)
-        .filter(ActivityRecord.facility_id == facility_id if facility_id is not None else True)
+        .filter(scope_filter(ActivityRecord.facility_id, facility_id) if facility_id is not None else True)
         .filter(*_date_filters(start, end))
         .distinct(ActivityRecord.activity_type)
         .order_by(ActivityRecord.activity_type, ActivityRecord.period_start.desc(), CalculatedEmission.calculated_at.desc())

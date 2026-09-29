@@ -13,6 +13,7 @@ import logging
 from collections import defaultdict
 from typing import Any
 from uuid import UUID
+from services.scope import scope_filter
 
 from sqlalchemy.orm import Session
 
@@ -88,7 +89,7 @@ def run_detection(db: Session, facility_id: UUID | None = None) -> int:
     )
     
     if facility_id is not None:
-        stmt = stmt.where(ActivityRecord.facility_id == facility_id)
+        stmt = stmt.where(scope_filter(ActivityRecord.facility_id, facility_id))
     results = db.execute(stmt).all()
     
     if not results:
@@ -154,7 +155,7 @@ def query_anomalies(
         from models.activity_record import ActivityRecord
         stmt = stmt.join(CalculatedEmission, Anomaly.calculated_emission_id == CalculatedEmission.id).join(
             ActivityRecord, CalculatedEmission.activity_record_id == ActivityRecord.id
-        ).where(ActivityRecord.facility_id == facility_id)
+        ).where(scope_filter(ActivityRecord.facility_id, facility_id))
     if metric:
         stmt = stmt.where(Anomaly.metric == metric)
     if facility:

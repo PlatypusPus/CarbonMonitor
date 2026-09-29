@@ -33,7 +33,7 @@ def validate_membership(db, role_name, facility_id):
 
 @router.get("", response_model=list[UserResponse])
 def list_users(db: Session = Depends(get_db), admin: User = Depends(require_role("admin"))):
-    return [me(user) for user in db.query(User).order_by(User.created_at).all()]
+    return [me(user) for user in db.query(User).filter(User.organization_id == admin.organization_id).order_by(User.created_at).all()]
 
 
 @router.post("", response_model=UserResponse, status_code=201)
@@ -44,13 +44,16 @@ def create_user(payload: UserCreate, db: Session = Depends(get_db),
         raise HTTPException(409, "An account with this email already exists")
     facility_id = payload.facility_id
     if payload.role == "facility_manager" and facility_id is None:
-        facility = Facility(name=f"{payload.full_name}'s facility")
+        facility = Facility(name=f"{payload.full_name}'s facility", organization_id=admin.organization_id)
         db.add(facility)
         db.flush()
         facility_id = facility.id
+    elif facility_id is not None:
+        from dependencies import check_facility_access
+        check_facility_access(admin, facility_id)
     role = validate_membership(db, payload.role, facility_id)
     user = User(email=email, full_name=payload.full_name, hashed_password=hash_password(payload.password),
-                role_id=role.id, facility_id=facility_id, is_active=True)
+                role_id=role.id, facility_id=facility_id, organization_id=admin.organization_id, is_active=True)
     db.add(user)
     try:
         db.commit()
@@ -65,7 +68,7 @@ def create_user(payload: UserCreate, db: Session = Depends(get_db),
 def update_user(user_id: UUID, payload: UserUpdate, db: Session = Depends(get_db),
                 admin: User = Depends(require_role("admin"))):
     user = db.get(User, user_id)
-    if user is None:
+    if user is None or user.organization_id != admin.organization_id:
         raise HTTPException(404, "User not found")
     changes = payload.model_dump(exclude_unset=True)
     if any(changes.get(key, True) is None for key in ("role", "is_active", "full_name")):
@@ -76,6 +79,9 @@ def update_user(user_id: UUID, payload: UserUpdate, db: Session = Depends(get_db
     if user.id == admin.id and (role_name != "admin" or changes.get("is_active") is False):
         raise HTTPException(409, "You cannot disable or demote your own administrator account")
     facility_id = changes.get("facility_id", user.facility_id)
+    if facility_id is not None:
+        from dependencies import check_facility_access
+        check_facility_access(admin, facility_id)
     role = validate_membership(db, role_name, facility_id)
     user.role = role
     user.facility_id = facility_id
@@ -84,6 +90,7 @@ def update_user(user_id: UUID, payload: UserUpdate, db: Session = Depends(get_db
     if "is_active" in changes:
         user.is_active = changes["is_active"]
     if {"role", "facility_id", "is_active"} & changes.keys():
+        user.auth_version += 1
         db.query(UserSession).filter(UserSession.user_id == user.id).update({"revoked": True})
     db.commit()
     db.refresh(user)

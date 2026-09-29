@@ -61,11 +61,14 @@ def calculate_record(
 def list_calculations(
     skip: int = 0, limit: int = 100, activity_record_id: uuid.UUID | None = None, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)
 ) -> Any:
-    stmt = select(CalculatedEmission).offset(skip).limit(limit)
+    from dependencies import facility_scope
+    from services.scope import scope_filter
+    stmt = select(CalculatedEmission).join(ActivityRecord).where(
+        scope_filter(ActivityRecord.facility_id, facility_scope(None, current_user))).offset(skip).limit(limit)
     
     # Restrict to user's facility if not admin
     if current_user.role.name != "admin":
-        stmt = stmt.join(ActivityRecord).where(ActivityRecord.facility_id == current_user.facility_id)
+        stmt = stmt.where(ActivityRecord.facility_id == current_user.facility_id)
         
     if activity_record_id:
         if current_user.role.name != "admin":

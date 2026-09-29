@@ -23,6 +23,14 @@ class Settings(BaseSettings):
     jwt_algorithm: str = "HS256"
     access_token_expire_minutes: int = 15
     refresh_token_expire_days: int = 7
+    public_app_url: str = "http://localhost:5173"
+    smtp_host: str = "localhost"
+    smtp_port: int = 1025
+    smtp_username: str = ""
+    smtp_password: str = ""
+    smtp_from: str = "CarbonTrace <noreply@carbontrace.local>"
+    smtp_starttls: bool = False
+    smtp_ssl: bool = False
 
     @property
     def cors_origins_list(self) -> list[str]:
@@ -33,6 +41,8 @@ class Settings(BaseSettings):
         return self.environment.lower() == "production"
 
     def assert_production_ready(self) -> None:
+        if self.is_production and (not self.public_app_url.startswith("https://") or not (self.smtp_starttls or self.smtp_ssl)):
+            raise RuntimeError("Production requires an HTTPS application URL and TLS email delivery")
         if self.is_production and self.jwt_secret_key == "dev-insecure-change-me":
             raise RuntimeError(
                 "JWT_SECRET_KEY is still the insecure default; set a strong secret "

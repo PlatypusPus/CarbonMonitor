@@ -2,6 +2,7 @@
 
 from datetime import UTC, datetime, time
 from uuid import UUID
+from services.scope import scope_filter
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Response, UploadFile, status
 from pydantic import ValidationError
@@ -45,7 +46,7 @@ def list_activity_records(
     By default returns only confirmed records. Use confirmed_only=false to include drafts.
     Non-admin users only see records for their assigned facility.
     """
-    query = db.query(ActivityRecord)
+    query = db.query(ActivityRecord).filter(scope_filter(ActivityRecord.facility_id, facility_scope(None, user)))
     if user.role.name != "admin":
         query = query.filter(ActivityRecord.facility_id == user.facility_id)
     if facility_id is not None:
@@ -70,7 +71,7 @@ def list_activity_drafts(
     """
     query = db.query(OCRDraft)
     if scope is not None:
-        query = query.filter(OCRDraft.facility_id == scope)
+        query = query.filter(scope_filter(OCRDraft.facility_id, scope))
     return query.order_by(OCRDraft.created_at.desc()).all()
 
 
@@ -110,6 +111,7 @@ async def create_ocr_draft(
                 detail="missing required facility context: supply facility_id, include it in the document, or attach a facility to the user",
             )
         # Enforce scope check on the effective facility
+        check_facility_access(user, UUID(str(effective_facility_id)))
         if user.role.name != "admin":
             if user.facility_id is None or user.facility_id != effective_facility_id:
                 raise HTTPException(
@@ -311,8 +313,7 @@ def get_activity_record(
     record = db.get(ActivityRecord, record_id)
     if record is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Activity record not found")
-    if user.role.name != "admin" and record.facility_id != user.facility_id:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to access this record")
+    check_facility_access(user, record.facility_id)
     return record
 
 
@@ -326,8 +327,7 @@ def create_activity_record(
 
     Only for admin/facility_manager. Record is immediately confirmed and credited to emissions.
     """
-    if user.role.name != "admin":
-        check_facility_access(user, payload.facility_id)
+    check_facility_access(user, payload.facility_id)
     record = ActivityRecord(
         facility_id=payload.facility_id,
         period_start=payload.period_start,
@@ -375,9 +375,8 @@ def update_activity_record(
     record = db.get(ActivityRecord, record_id)
     if record is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Activity record not found")
-    if user.role.name != "admin":
-        check_facility_access(user, record.facility_id)
-        check_facility_access(user, payload.facility_id)
+    check_facility_access(user, record.facility_id)
+    check_facility_access(user, payload.facility_id)
 
     # Update fields
     record.facility_id = payload.facility_id
@@ -420,6 +419,7 @@ def delete_activity_record(
     record = db.get(ActivityRecord, record_id)
     if record is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Activity record not found")
+    check_facility_access(user, record.facility_id)
     db.query(CalculatedEmission).filter(CalculatedEmission.activity_record_id == record.id).delete(synchronize_session=False)
     db.delete(record)
     db.commit()
@@ -452,8 +452,7 @@ def confirm_ocr_draft(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="OCR draft not found")
 
     # Enforce facility access on the draft's facility
-    if user.role.name != "admin":
-        check_facility_access(user, draft.facility_id)
+    check_facility_access(user, draft.facility_id)
 
     if draft.status == "confirmed":
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="OCR draft already confirmed")
@@ -514,8 +513,7 @@ def reject_ocr_draft(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="OCR draft not found")
 
     # Enforce facility access on the draft's facility
-    if user.role.name != "admin":
-        check_facility_access(user, draft.facility_id)
+    check_facility_access(user, draft.facility_id)
 
     if draft.status == "confirmed":
         raise HTTPException(

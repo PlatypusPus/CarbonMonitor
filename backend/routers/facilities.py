@@ -18,7 +18,7 @@ def list_facilities(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ) -> list[Facility]:
-    query = db.query(Facility).order_by(Facility.created_at)
+    query = db.query(Facility).filter(Facility.organization_id == user.organization_id).order_by(Facility.created_at)
     if user.role.name != "admin":
         query = query.filter(Facility.id == user.facility_id)
     return query.all()
@@ -34,8 +34,7 @@ def get_facility(
     facility = db.get(Facility, facility_id)
     if facility is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Facility not found")
-    if user.role.name != "admin" and facility.id != user.facility_id:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to access this facility")
+    check_facility_access(user, facility.id)
     return facility
 
 
@@ -46,6 +45,7 @@ def create_facility(
     user: User = Depends(require_role("admin")),
 ) -> Facility:
     facility = Facility(
+        organization_id=user.organization_id,
         name=payload.name,
         location=payload.location,
         region_code=payload.region_code,
@@ -89,6 +89,7 @@ def delete_facility(
     user: User = Depends(require_role("admin")),
 ) -> None:
     """Delete a facility (admin only)."""
+    check_facility_access(user, facility_id)
     facility = db.get(Facility, facility_id)
     if facility is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Facility not found")

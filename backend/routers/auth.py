@@ -3,6 +3,7 @@
 from fastapi import APIRouter, Cookie, Depends, HTTPException, Response, status
 from sqlalchemy.orm import Session
 from sqlalchemy import func
+from datetime import datetime, timezone
 
 from config import get_settings
 from database import get_db
@@ -45,8 +46,11 @@ def login(payload: LoginRequest, response: Response, db: Session = Depends(get_d
             status_code=status.HTTP_403_FORBIDDEN,
             detail="User account is disabled",
         )
+    if not user.email_verified:
+        raise HTTPException(403, "Verify your email before signing in")
+    user.last_login_at = datetime.now(timezone.utc)
     _set_refresh_cookie(response, issue_refresh_token(db, user.id))
-    token = create_access_token(subject=str(user.id), role=user.role.name)
+    token = create_access_token(subject=str(user.id), role=user.role.name, version=user.auth_version)
     return TokenResponse(access_token=token)
 
 
@@ -67,7 +71,7 @@ def refresh(
         )
     user, new_token = result
     _set_refresh_cookie(response, new_token)
-    token = create_access_token(subject=str(user.id), role=user.role.name)
+    token = create_access_token(subject=str(user.id), role=user.role.name, version=user.auth_version)
     return TokenResponse(access_token=token)
 
 
@@ -94,4 +98,8 @@ def me(current_user: User = Depends(get_current_user)) -> UserResponse:
         facility_id=current_user.facility_id,
         is_active=current_user.is_active,
         created_at=current_user.created_at,
+        organization_id=current_user.organization_id,
+        organization_name=current_user.organization.name if current_user.organization else None,
+        email_verified=current_user.email_verified,
+        last_login_at=current_user.last_login_at,
     )

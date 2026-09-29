@@ -4,6 +4,7 @@ from collections import defaultdict
 from datetime import datetime, timezone
 from io import BytesIO
 from uuid import UUID
+from services.scope import scope_filter
 from xml.sax.saxutils import escape
 
 from reportlab.lib import colors
@@ -48,15 +49,15 @@ def generate_esg_pdf(db: Session, facility_id: UUID | None = None) -> bytes:
         .join(Facility, Facility.id == ActivityRecord.facility_id)
         .join(EmissionFactor, EmissionFactor.id == CalculatedEmission.emission_factor_id)
         .where(ActivityRecord.confirmed_by_user.is_(True))
-        .where(ActivityRecord.facility_id == facility_id if facility_id is not None else True)
+        .where(scope_filter(ActivityRecord.facility_id, facility_id) if facility_id is not None else True)
         .order_by(Facility.name, ActivityRecord.period_start)
     ).all()
     pending = db.query(OCRDraft).filter(OCRDraft.status == 'draft',
-        OCRDraft.facility_id == facility_id if facility_id is not None else True).count()
+        scope_filter(OCRDraft.facility_id, facility_id) if facility_id is not None else True).count()
     missing = db.query(ActivityRecord).outerjoin(
         CalculatedEmission, CalculatedEmission.activity_record_id == ActivityRecord.id
     ).filter(ActivityRecord.confirmed_by_user.is_(True), CalculatedEmission.id.is_(None),
-        ActivityRecord.facility_id == facility_id if facility_id is not None else True).count()
+        scope_filter(ActivityRecord.facility_id, facility_id) if facility_id is not None else True).count()
     buffer = BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=A4, title='CarbonTrace Emissions Report',
                             leftMargin=1.6*cm, rightMargin=1.6*cm,

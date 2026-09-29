@@ -20,13 +20,14 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     return _pwd_context.verify(plain_password, hashed_password)
 
 
-def create_access_token(subject: str, role: str, expires_minutes: int | None = None) -> str:
+def create_access_token(subject: str, role: str, expires_minutes: int | None = None, version: int = 0) -> str:
     settings = get_settings()
     minutes = expires_minutes or settings.access_token_expire_minutes
     payload = {
         "sub": subject,
         "role": role,
         "type": "access",
+        "version": version,
         "exp": datetime.now(timezone.utc) + timedelta(minutes=minutes),
     }
     return jwt.encode(payload, settings.jwt_secret_key, algorithm=settings.jwt_algorithm)

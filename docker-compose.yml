@@ -5,6 +5,14 @@
 # Docker Compose auto-loads .env for ${VAR} substitution below.
 
 services:
+  mailpit:
+    image: axllent/mailpit:v1.27
+    container_name: carbontrace-mailpit
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8025:8025"
+    networks:
+      - carbontrace
   # ---------------------------------------------------------------------------
   # PostgreSQL — relational store for users, roles, facilities, sessions, uploads.
   # This is the "system of record" for anything transactional/relational.
@@ -42,7 +50,12 @@ services:
       - .env
     environment:
       - DATABASE_URL=postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      - SMTP_HOST=${SMTP_HOST:-mailpit}
+      - SMTP_PORT=${SMTP_PORT:-1025}
+      - PUBLIC_APP_URL=${PUBLIC_APP_URL:-http://localhost:5173}
     depends_on:
+      mailpit:
+        condition: service_started
       postgres:
         condition: service_healthy
     expose:

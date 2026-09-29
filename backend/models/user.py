@@ -6,12 +6,13 @@ import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, String, Uuid, func
+from sqlalchemy import Boolean, DateTime, ForeignKey, String, Uuid, func, Integer
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from database import Base
 
 if TYPE_CHECKING:
+    from models.organization import Organization
     from models.facility import Facility
     from models.role import Role
     from models.session import UserSession
@@ -29,6 +30,10 @@ class User(Base):
 
     role_id: Mapped[int] = mapped_column(ForeignKey("roles.id"), nullable=False)
     facility_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("facilities.id"))
+    organization_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("organizations.id"), index=True)
+    email_verified: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true", nullable=False)
+    last_login_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    auth_version: Mapped[int] = mapped_column(Integer, default=0, server_default="0", nullable=False)
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
@@ -38,6 +43,7 @@ class User(Base):
     )
 
     role: Mapped[Role] = relationship(back_populates="users")
+    organization: Mapped[Organization | None] = relationship()
     facility: Mapped[Facility | None] = relationship(back_populates="users")
     sessions: Mapped[list[UserSession]] = relationship(
         back_populates="user", cascade="all, delete-orphan"

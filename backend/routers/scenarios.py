@@ -15,6 +15,7 @@ from models.scenario import Scenario
 from models.activity_record import ActivityRecord
 from schemas.scenario import ScenarioCreate, ScenarioResponse, ScenarioPreview, ScenarioComparison
 from services.scenario import run_scenario
+from services.scope import scope_filter
 
 router = APIRouter()
 
@@ -109,10 +110,10 @@ def run_scenario_endpoint(scenario_in: ScenarioCreate, db: Session = Depends(get
 def list_scenarios(facility_id: uuid.UUID | None = None, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)) -> Any:
     if facility_id:
         check_facility_access(current_user, facility_id)
-    elif current_user.role.name != "admin":
+    else:
         facility_id = facility_scope(None, current_user)
 
     stmt = select(Scenario)
-    if facility_id:
-        stmt = stmt.where(Scenario.facility_id == facility_id)
+    if facility_id is not None:
+        stmt = stmt.where(scope_filter(Scenario.facility_id, facility_id))
     return db.execute(stmt).scalars().all()
