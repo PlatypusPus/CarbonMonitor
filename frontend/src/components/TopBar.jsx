@@ -3,6 +3,7 @@ import { Building2, LogOut, ShieldCheck } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { useWorkspace } from "../context/WorkspaceContext";
 import { useFacilities } from "../api/hooks";
+import Dropdown from "./Dropdown";
 
 export default function TopBar() {
   const { user, logout } = useAuth();
@@ -22,10 +23,7 @@ export default function TopBar() {
       <div className="flex min-w-0 flex-wrap items-center gap-3">
         <div className="flex min-w-0 items-center gap-2 text-sm">
           <Building2 size={16} className="shrink-0 text-leaf" />
-          {isAdmin ? <select aria-label="Workspace facility" value={facilityId} onChange={(e) => setFacilityId(e.target.value)} className="w-[220px] min-w-0 font-semibold">
-            <option value="">All facilities</option>
-            {(facilities.data ?? []).map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}
-          </select> : <span>{facilities.data?.find((f) => f.id === facilityId)?.name ?? (facilities.isLoading ? "Loading facility..." : "No facility assigned")}</span>}
+          {isAdmin ? <Dropdown label="Workspace facility" value={facilityId} onChange={setFacilityId} className="w-[220px]" options={[{value:'',label:'All facilities'}, ...(facilities.data ?? []).map((f) => ({value:f.id,label:f.name}))]} /> : <span>{facilities.data?.find((f) => f.id === facilityId)?.name ?? 'No facility assigned'}</span>}
         </div>
         <div className="hidden text-right text-xs sm:block"><p className="font-semibold text-ink">{user?.full_name || user?.email}</p><p className="mt-1 flex items-center justify-end gap-1 text-muted"><ShieldCheck size={12} />{isAdmin ? "Administrator" : "Facility manager"}</p></div>
         <div className="grid h-9 w-9 place-items-center rounded-full bg-mint text-sm font-semibold text-leaf-deep">

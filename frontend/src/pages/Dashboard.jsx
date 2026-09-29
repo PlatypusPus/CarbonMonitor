@@ -1,10 +1,11 @@
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { useState } from "react";
 import DateRange from "../components/DateRange";
+import Dropdown from "../components/Dropdown";
+import { formatNumber as fmt } from "../lib/trends";
 
 import { useAnomalies, useLatest, useSummary, useTimeseries } from "../api/hooks";
 
-const fmt = (n) => (typeof n === "number" ? n.toLocaleString(undefined, { maximumFractionDigits: 1 }) : "-");
 const time = (ts) => new Date(ts).toLocaleDateString([], { year: "numeric", month: "short", timeZone: "UTC" });
 
 function LivePill() {
@@ -54,8 +55,8 @@ function ChartCard({ series }) {
             </defs>
             <CartesianGrid stroke="#ECF1EE" vertical={false} />
             <XAxis dataKey="t" tick={{ fontSize: 11, fill: "#A8A89F" }} tickLine={false} axisLine={false} />
-            <YAxis tick={{ fontSize: 11, fill: "#A8A89F" }} tickLine={false} axisLine={false} width={64} />
-            <Tooltip />
+            <YAxis tickFormatter={fmt} tick={{ fontSize: 11, fill: "#55554F" }} tickLine={false} axisLine={false} width={92} />
+            <Tooltip formatter={(value) => [fmt(value), "kg CO₂e"]} />
             <Area type="monotone" dataKey="value" stroke="#2E9E6B" strokeWidth={2.5} fill="url(#co2)" />
           </AreaChart>
         </ResponsiveContainer>
@@ -112,9 +113,7 @@ export default function Dashboard() {
       </div>
 
       <DateRange />
-      <label className="text-sm text-body">Chart and activity type <select aria-label="Chart and activity type" className="ml-2 rounded-lg border border-line bg-surface px-3 py-2" value={metric} onChange={(e) => setMetric(e.target.value)}>
-        {['electricity', 'diesel', 'petrol', 'lpg'].map((type) => <option key={type} value={type}>{type} (Scope {type === 'electricity' ? '2' : '1'})</option>)}
-      </select></label>
+      <div className="max-w-xs"><p className="mb-2 text-xs font-semibold text-body">Chart and activity type</p><Dropdown label="Chart and activity type" value={metric} onChange={setMetric} options={['electricity', 'diesel', 'petrol', 'lpg'].map((type) => ({value:type,label:`${type} (Scope ${type === 'electricity' ? '2' : '1'})`}))} /></div>
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <StatCard label={`Total ${defaultMetric} emissions`} value={series.data ? fmt(series.data.reduce((total, row) => total + (row.value ?? 0), 0)) : "-"} unit="kg CO2e" />
         {metrics.map((m) => (

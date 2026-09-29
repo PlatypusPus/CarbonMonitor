@@ -27,6 +27,6 @@ The numerical reconciliation is against the saved Mescom Units values. The workb
 
 The From and Through controls filter reporting-period start dates in UTC, including both selected dates. They are shared between Overview and Trends. Overview's chart and activity list use the same activity type and date filter. Summary cards cover the selected dates; flagged-record counts are explicitly labelled as all dates.
 
-Group by changes bucket size, not the reporting range. These are monthly bills, so hourly and daily grouping does not produce new measurements or spread monthly consumption across days. Choosing an unpopulated Scope 1 activity shows an empty chart instead of switching to electricity.
+Trends groups the monthly records into months, calendar quarters, or years. Monthly and quarterly charts have separate year panels using the same vertical scale. Totals retain their full precision internally; displayed values use two decimal places. Partial quarters and years include only the selected records and are not annualized. Choosing an unpopulated Scope 1 activity shows an empty chart instead of switching to electricity.
 
 Verified against live PostgreSQL: selecting June 2025 returns one electricity record and one monthly chart point, both 56,662.00 kg CO2e. The summary count is also one. Regression tests cover inclusive date boundaries, empty ranges, reversed ranges and facility isolation.

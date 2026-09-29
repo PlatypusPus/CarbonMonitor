@@ -1,169 +1,61 @@
 import { useState } from "react";
 import { UploadCloud } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-
-import { useSummary, useTimeseries } from "../api/hooks";
+import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { useTimeseries } from "../api/hooks";
 import DateRange from "../components/DateRange";
+import Dropdown from "../components/Dropdown";
+import { groupPeriods, formatNumber as fmt } from "../lib/trends";
 
-const INTERVALS = [
-  { label: "1 month", value: "1mo" },
-  { label: "15 min", value: "15m" },
-  { label: "1 hr", value: "1h" },
-  { label: "6 hr", value: "6h" },
-  { label: "1 day", value: "1d" },
-];
-
-const fmt = (n, d = 1) =>
-  typeof n === "number" ? n.toLocaleString(undefined, { maximumFractionDigits: d }) : "-";
-const time = (ts, interval) =>
-  new Date(ts).toLocaleString([], { year: "numeric", month: "short", timeZone: "UTC",
-    ...(interval !== "1mo" ? { day: "numeric" } : {}),
-    ...(!["1mo", "1d"].includes(interval) ? { hour: "2-digit", minute: "2-digit" } : {}) });
+const activities = ['electricity', 'diesel', 'petrol', 'lpg'].map((type) => ({value:type,label:`${type.toUpperCase()} · Scope ${type === 'electricity' ? 2 : 1}`}));
+const periods = [{value:'month',label:'Monthly'}, {value:'quarter',label:'Quarterly'}, {value:'year',label:'Yearly'}];
 
 export default function Trends() {
   const navigate = useNavigate();
-  const summary = useSummary();
-  const metrics = summary.data ?? [];
-
-  const [metric, setMetric] = useState("electricity");
-  const [interval, setInterval] = useState("1mo");
-
-  const effectiveMetric = metric;
-  const series = useTimeseries({ metric: effectiveMetric, interval });
-  const points = (series.data ?? []).map((p) => ({ t: time(p.timestamp, interval), value: p.value }));
-  const unitLabel = metrics.find((m) => m.metric === effectiveMetric)?.unit ?? "";
-
-  return (
-    <div className="flex flex-col gap-5">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-ink">Trends & Analytics</h1>
-          <p className="text-sm text-muted">Historical emission patterns by metric and interval</p>
-        </div>
-        <button
-          onClick={() => navigate("/upload")}
-          className="inline-flex shrink-0 items-center gap-2 rounded-xl bg-leaf px-4 py-2.5 text-sm font-bold text-white shadow-card transition-colors hover:bg-leaf-hover"
-        >
-          <UploadCloud size={16} />
-          Upload data
-        </button>
-      </div>
-
-      <DateRange />
-      <div className="flex flex-wrap items-center gap-3">
-        <span className="text-sm text-muted">Group by</span>
-        <select
-          aria-label="Activity type"
-          value={effectiveMetric}
-          onChange={(e) => setMetric(e.target.value)}
-          className="rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink outline-none focus:border-leaf"
-        >
-          {['electricity', 'diesel', 'petrol', 'lpg'].map((type) => (
-            <option key={type} value={type}>
-              {type} (Scope {type === 'electricity' ? '2' : '1'})
-            </option>
-          ))}
-        </select>
-
-        <div className="interval-control" role="group" aria-label="Time grouping">
-          {INTERVALS.map((iv) => (
-            <button
-              key={iv.value}
-              aria-pressed={interval === iv.value}
-              onClick={() => setInterval(iv.value)}
-            >
-              {iv.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div className="rounded-card border border-line bg-surface p-5">
-        <div className="mb-3 flex items-center justify-between">
-          <span className="text-sm font-semibold text-ink">{effectiveMetric}</span>
-          <span className="font-mono text-xs text-muted">{unitLabel || "kg CO₂e"}</span>
-        </div>
-        {series.isError || summary.isError ? (
-          <p role="alert" className="text-sm text-rose">Failed to load emissions. <button className="underline" onClick={() => { summary.refetch(); series.refetch(); }}>Retry</button></p>
-        ) : series.isLoading ? (
-          <div className="h-64 animate-pulse rounded-lg bg-canvas" />
-        ) : points.length === 0 ? (
-          <div className="grid h-64 place-items-center rounded-lg border border-dashed border-line text-sm text-muted">
-            No data for this range
-          </div>
-        ) : (
-          <ResponsiveContainer width="100%" height={256}>
-            <AreaChart data={points} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
-              <defs>
-                <linearGradient id="trend" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#2E9E6B" stopOpacity={0.22} />
-                  <stop offset="100%" stopColor="#2E9E6B" stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid stroke="#ECF1EE" vertical={false} />
-              <XAxis
-                dataKey="t"
-                tick={{ fontSize: 11, fill: "#A8A89F" }}
-                tickLine={false}
-                axisLine={false}
-              />
-              <YAxis
-                tick={{ fontSize: 11, fill: "#A8A89F" }}
-                tickLine={false}
-                axisLine={false}
-                width={64}
-              />
-              <Tooltip />
-              <Area
-                type="monotone"
-                dataKey="value"
-                stroke="#2E9E6B"
-                strokeWidth={2.5}
-                fill="url(#trend)"
-              />
-            </AreaChart>
-          </ResponsiveContainer>
-        )}
-      </div>
-
-      {metrics.length > 0 && (
-        <div className="overflow-hidden rounded-card border border-line bg-surface">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-line bg-canvas text-left">
-                <th className="px-4 py-3 font-semibold text-ink">Metric</th>
-                <th className="px-4 py-3 font-semibold text-ink">Latest record</th>
-                <th className="px-4 py-3 font-semibold text-ink">Avg per record</th>
-                <th className="px-4 py-3 font-semibold text-ink">Records in date range</th>
-              </tr>
-            </thead>
-            <tbody>
-              {metrics.map((m) => (
-                <tr
-                  key={m.metric}
-                  className="cursor-pointer border-b border-line last:border-0 hover:bg-canvas"
-                  onClick={() => setMetric(m.metric)}
-                >
-                  <td
-                    className={`px-4 py-3 font-mono text-xs ${
-                      m.metric === metric ? "font-semibold text-leaf" : "text-ink"
-                    }`}
-                  >
-                    {m.metric}
-                  </td>
-                  <td className="px-4 py-3 font-mono text-ink">
-                    {fmt(m.latest_value)}{" "}
-                    <span className="text-xs text-muted">{m.unit}</span>
-                  </td>
-                  <td className="px-4 py-3 font-mono text-muted">{fmt(m.avg_value)}</td>
-                  <td className="px-4 py-3 text-muted">{m.count.toLocaleString()}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+  const [metric, setMetric] = useState('electricity');
+  const [interval, setInterval] = useState('month');
+  const series = useTimeseries({ metric, interval: '1mo' });
+  const points = groupPeriods(series.data ?? [], interval);
+  const years = [...new Set(points.map((point) => point.year))];
+  const panels = interval === 'year' ? [{title:'Annual comparison', points}] : years.map((year) => ({title:String(year), points:points.filter((point) => point.year === year)}));
+  const total = points.reduce((sum, point) => sum + point.value, 0);
+  const scope = metric === 'electricity' ? 2 : 1;
+  const color = scope === 2 ? '#236F4B' : '#AD6228';
+  return <div className="flex flex-col gap-6">
+    <header className="flex flex-wrap items-start justify-between gap-3">
+      <div><h1 className="text-2xl font-bold text-ink">Trends & Analytics</h1><p className="mt-1 text-sm text-body">Compare emissions across reporting periods.</p></div>
+      <button onClick={() => navigate('/upload')} className="inline-flex items-center gap-2 rounded-lg bg-leaf-action px-4 py-3 text-sm font-semibold text-white hover:bg-leaf-action-hover"><UploadCloud size={16} />Upload data</button>
+    </header>
+    <DateRange />
+    <div className="flex flex-wrap items-end gap-5">
+      <div className="w-full sm:w-64"><p className="mb-2 text-xs font-semibold text-body">Emission source</p><Dropdown label="Emission source" value={metric} onChange={setMetric} options={activities} /></div>
+      <div><p className="mb-2 text-xs font-semibold text-body">Reporting groups</p><div className="interval-control" role="group" aria-label="Reporting groups">
+        {periods.map((period) => <button key={period.value} aria-pressed={interval === period.value} onClick={() => setInterval(period.value)}>{period.label}</button>)}
+      </div></div>
     </div>
-  );
+    {series.isError ? <p role="alert" className="rounded-xl border border-rose p-4 text-sm">Unable to load trends. <button className="underline" onClick={() => series.refetch()}>Retry</button></p>
+      : series.isLoading ? <div className="h-64 animate-pulse rounded-xl bg-canvas" />
+      : !points.length ? <div className="rounded-xl border border-dashed border-line bg-surface p-10 text-center"><h2 className="font-semibold text-ink">No {metric} records in this range</h2><p className="mt-2 text-sm text-body">Choose another facility or date range, or upload records for Scope {scope}.</p></div>
+      : <>
+        <div className="grid gap-3 sm:grid-cols-3">
+          {[[`${metric} total (Scope ${scope})`,`${fmt(total)} kg CO₂e`],['Average per displayed period',`${fmt(total / points.length)} kg CO₂e`],['Reporting coverage',`${points.length} ${interval === 'month' ? 'months' : interval === 'quarter' ? 'quarters' : 'years'}`]].map(([label,value]) => <div key={label} className="rounded-xl border border-line bg-surface p-4"><p className="text-xs text-body">{label}</p><p className="mt-2 font-mono text-lg font-semibold text-ink">{value}</p></div>)}
+        </div>
+        <p className="text-xs text-body">Groups include only records within the selected dates. Partial quarters and years are not annualized; missing periods are not treated as zero.</p>
+        <div className="grid gap-5 xl:grid-cols-2">
+          {panels.map((panel) => <section key={panel.title} className={`min-w-0 rounded-xl border border-line bg-surface p-4 sm:p-5 ${panels.length === 1 ? 'xl:col-span-2' : ''}`} aria-label={`${panel.title} emissions`}>
+            <div className="mb-5 flex items-center justify-between gap-3"><div><h2 className="text-lg font-semibold text-ink">{panel.title}</h2><p className="text-xs text-body">{activities.find((item) => item.value === metric).label}</p></div><p className="text-right font-mono text-sm text-ink">{fmt(panel.points.reduce((sum, point) => sum + point.value, 0))}<span className="block text-xs text-body">kg CO₂e</span></p></div>
+            <ResponsiveContainer width="100%" height={260}><BarChart data={panel.points} margin={{top:8,right:8,left:0,bottom:0}}>
+              <CartesianGrid stroke="#E6E6E0" vertical={false} /><XAxis dataKey="label" tick={{fontSize:11,fill:'#55554F'}} tickLine={false} axisLine={false} />
+              <YAxis domain={[0, Math.max(1, ...points.map((point) => point.value)) * 1.1]} tickFormatter={fmt} width={94} tick={{fontSize:10,fill:'#55554F'}} tickLine={false} axisLine={false} />
+              <Tooltip formatter={(value) => [fmt(value), 'kg CO₂e']} labelFormatter={(label) => interval === 'year' ? label : `${label} ${panel.title}`} contentStyle={{borderRadius:12,borderColor:'#CBD8D0'}} cursor={{fill:'#F4F7F5'}} />
+              <Bar dataKey="value" fill={color} radius={[4,4,0,0]} maxBarSize={48} />
+            </BarChart></ResponsiveContainer>
+            <details className="mt-4 border-t border-line pt-3"><summary className="cursor-pointer text-sm font-semibold text-leaf-action">View period values</summary>
+              <table className="mt-3 w-full text-left text-sm"><thead><tr className="text-body"><th className="py-2">Period</th><th className="text-right">kg CO₂e</th><th className="text-right">Records</th></tr></thead><tbody>{panel.points.map((point) => <tr key={point.key} className="border-t border-line"><td className="py-2">{point.label}</td><td className="text-right font-mono">{fmt(point.value)}</td><td className="text-right">{point.count}</td></tr>)}</tbody></table>
+            </details>
+          </section>)}
+        </div>
+      </>}
+  </div>;
 }
+
