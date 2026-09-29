@@ -137,7 +137,12 @@ input:disabled {
 .dropdown-option:hover, .dropdown-option:focus-visible { @apply bg-canvas; }
 .dropdown-option[aria-pressed="true"] { @apply bg-mint font-semibold text-leaf-action; }
 
-.workspace-sidebar { background: #204b36; }
+.workspace-sidebar { background: #fff; }
+.workspace-nav-link {
+  @apply flex min-h-12 items-center gap-3 rounded-lg px-3 py-3 text-sm font-medium text-body transition-colors;
+}
+.workspace-nav-link:hover { @apply bg-canvas text-leaf-action; }
+.workspace-nav-link.is-active { @apply bg-[#E2EFE7] font-semibold text-leaf-action; box-shadow: inset 3px 0 #236f4b; }
 .workspace-main h1 { font-size: clamp(1.65rem, 2.3vw, 2.15rem); letter-spacing: -0.035em; line-height: 1.2; }
 .workspace-main h2 { letter-spacing: -0.02em; }
 .workspace-main input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]) {
