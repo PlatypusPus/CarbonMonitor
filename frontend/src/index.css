@@ -157,3 +157,6 @@ input:disabled {
 .account-input { @apply mt-2 block w-full rounded-lg border border-line bg-white px-3 py-3 text-sm text-ink outline-none focus:border-leaf-action focus:ring-2 focus:ring-mint; }
 .account-primary { @apply min-h-11 rounded-lg bg-leaf-action px-5 py-3 text-center text-sm font-semibold text-white transition-colors hover:bg-leaf-action-hover disabled:opacity-50; }
 .account-section { @apply rounded-xl border border-line bg-surface p-5 sm:p-7; }
+.auth-link { @apply font-semibold text-leaf-action underline decoration-leaf-action/30 underline-offset-4 hover:decoration-leaf-action; }
+.auth-error { @apply rounded-lg border border-rose/30 bg-rose/5 p-3 text-sm text-[#A62F38]; }
+.auth-layout :is(a, button):focus-visible { outline: 2px solid #438361; outline-offset: 4px; }
