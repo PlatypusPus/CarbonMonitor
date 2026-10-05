@@ -1,113 +1,135 @@
-import { ArrowRight, BarChart3, FileCheck2, Leaf, Upload, Building2, Users, SlidersHorizontal, Zap, Fuel, Check } from "lucide-react";
 import { Link } from "react-router-dom";
 
-import facilityHero from "../assets/carbontrace-facility-hero.png";
+// Illustrative rows only. They use the same formula the app applies: kg CO2e = quantity x factor.
+const FACTOR = 0.82;
+const sample = [
+  ["Jan 2026", 41200],
+  ["Feb 2026", 38650],
+  ["Mar 2026", 44900],
+].map(([month, kwh]) => ({ month, kwh, kg: kwh * FACTOR }));
+const n = (value) => Math.round(value).toLocaleString("en");
 
-const flow = [
-  { icon: Upload, title: "Bring your activity data", text: "Import electricity workbooks and fuel CSVs into the right facility." },
-  { icon: BarChart3, title: "Calculate and monitor", text: "Convert activity into Scope 1 and 2 CO2e with traceable factors." },
-  { icon: FileCheck2, title: "Report with confidence", text: "Investigate anomalies and export an emissions summary report." },
+const steps = [
+  ["Upload", "A Mescom electricity workbook (.xlsx), a fuel CSV, or a scanned bill. Each one is read into draft rows for the facility you pick."],
+  ["Review", "Drafts are listed with their source file and row. Nothing is counted yet, and rows you reject never reach a report."],
+  ["Confirm", "Confirming a row applies the emission factor valid for that period and stores the result with the factor that was used."],
+  ["Report", "Dashboard, trends, what-if scenarios and the PDF read only confirmed rows. Anomaly detection runs when you trigger it."],
 ];
 
-const audiences = [
-  { icon: Building2, title: "Facility managers", need: "Keep your site's records in order.", text: "Upload bills and fuel records to your assigned facility, check extracted values, and confirm what belongs in the ledger.", result: "A focused workspace for the site you manage." },
-  { icon: Users, title: "Administrators", need: "See the whole organization.", text: "Manage facilities and user access, switch between sites, and review records across the organization from one place.", result: "Local responsibility with organization-wide visibility." },
-  { icon: FileCheck2, title: "Sustainability & reporting teams", need: "Explain the numbers behind a report.", text: "Use period comparisons, calculation factors, and emissions summaries to prepare internal reviews with facility managers and decision-makers.", result: "A traceable starting point for reporting discussions." },
+const roles = [
+  ["Administrator", "Creates facilities and accounts, switches between facilities, reviews everything in the organization."],
+  ["Facility manager", "Uploads, reviews and confirms records for their own facility, and edits that facility's details."],
+  ["Auditor", "Read access to dashboards and reports. Cannot create or confirm records."],
+];
+
+const faq = [
+  ["Which files can I upload?", "The supported electricity workbook layout, CSVs with timestamp, metric, value and unit columns, and scanned bills or PDFs that go through the same review step."],
+  ["Where do emission factors come from?", "A table in the database, matched by activity type, region and validity dates. The seeded values are placeholders. Replace them with your approved factors before using any number externally."],
+  ["Is this a verified disclosure?", "No. It calculates from the records you confirm. Check units, completeness and factors first. Scope 3 is not included."],
 ];
 
 export default function Landing() {
   return (
     <div className="min-h-[100dvh] bg-canvas text-ink">
-      <header className="mx-auto flex min-h-20 max-w-7xl flex-wrap items-center justify-between gap-3 border-b border-line px-5 py-4 md:px-8">
-        <Link to="/" className="flex items-center gap-2 font-bold tracking-tight" aria-label="CarbonTrace home">
-          <span className="grid h-10 w-10 place-items-center rounded-xl bg-leaf-action text-white"><Leaf size={22} /></span>
-          CarbonTrace
-        </Link>
-        <nav className="flex flex-wrap items-center gap-2" aria-label="Public navigation">
-          <a href="#why-carbontrace" className="rounded-lg px-2 py-2 text-sm font-semibold hover:bg-black/5">Why CarbonTrace</a>
-          <a href="#who-its-for" className="rounded-lg px-2 py-2 text-sm font-semibold hover:bg-black/5">Who it's for</a>
-          <a href="#workflow" className="hidden rounded-lg px-3 py-2 text-sm font-semibold hover:bg-black/5 sm:block">How it works</a>
-          <Link to="/login" className="rounded-lg border border-[#bdc9c0] px-4 py-2 text-sm font-bold hover:border-leaf">Sign in</Link>
+      <header className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-5 py-5 md:px-8">
+        <Link to="/" className="text-lg font-bold tracking-tight" aria-label="CarbonTrace home">CarbonTrace</Link>
+        <nav className="flex items-center gap-2" aria-label="Public navigation">
+          <a href="#how-it-works" className="hidden rounded-lg px-3 py-2 text-sm font-semibold hover:bg-black/5 sm:block">How it works</a>
+          <a href="#scope" className="hidden rounded-lg px-3 py-2 text-sm font-semibold hover:bg-black/5 sm:block">What it covers</a>
+          <Link to="/login" className="rounded-lg border border-line bg-surface px-4 py-2 text-sm font-semibold hover:border-leaf">Sign in</Link>
         </nav>
       </header>
 
       <main>
-        <section className="mx-auto grid max-w-7xl items-center gap-10 px-5 py-14 md:px-8 lg:grid-cols-[0.95fr_1.05fr] lg:gap-14 lg:py-20">
-          <div className="max-w-xl">
-            <p className="mb-5 text-sm font-semibold text-leaf-action">For the people running your facilities</p>
-            <h1 className="text-5xl font-semibold leading-[1.04] tracking-[-0.045em] sm:text-6xl lg:text-7xl">Understand your carbon footprint.</h1>
-            <p className="mt-6 max-w-lg text-lg leading-8 text-body">A shared place for energy records, emissions tracking, and better decisions. From your first electricity bill to your next reduction plan.</p>
+        <section className="mx-auto grid max-w-6xl items-center gap-10 px-5 pb-16 pt-8 md:px-8 lg:grid-cols-2 lg:gap-14 lg:pb-24 lg:pt-14">
+          <div>
+            <h1 className="text-4xl font-semibold leading-[1.08] tracking-tight sm:text-5xl">Monthly electricity and fuel records in. Scope 1 and 2 emissions out.</h1>
+            <p className="mt-6 max-w-lg text-lg leading-8 text-body">Upload a workbook or CSV, review every row, then confirm it. Only confirmed rows reach the dashboard and the PDF report, so the numbers always trace back to a source file.</p>
             <div className="mt-8 flex flex-wrap gap-3">
-              <Link to="/login" className="inline-flex items-center gap-2 rounded-lg bg-leaf-action px-5 py-3 font-bold text-white transition hover:bg-leaf-action-hover active:translate-y-px">Open workspace <ArrowRight size={18} /></Link>
-              <a href="#workflow" className="rounded-lg border border-[#bdc9c0] px-5 py-3 font-bold transition hover:border-leaf">View workflow</a>
+              <Link to="/signup" className="rounded-lg bg-leaf-action px-5 py-3 font-semibold text-white hover:bg-leaf-action-hover">Create account</Link>
+              <Link to="/login" className="rounded-lg border border-line bg-surface px-5 py-3 font-semibold hover:border-leaf">Sign in</Link>
             </div>
-            <div className="mt-10 flex flex-wrap gap-x-6 gap-y-2 border-t border-line pt-5 text-sm text-body"><span>Electricity & fuel</span><span>Facility-level access</span><span>Traceable calculations</span></div>
           </div>
 
-          <figure className="overflow-hidden rounded-2xl bg-[#204B36]">
-            <img src={facilityHero} alt="Industrial facility with rooftop solar panels surrounded by forest" className="aspect-[5/4] w-full object-cover" />
-            <figcaption className="flex items-center justify-between gap-3 px-6 py-5 text-sm text-white"><span>One workspace. Every facility.</span><Leaf size={20} aria-hidden="true" /></figcaption>
+          <figure className="rounded-xl border border-line bg-surface p-5 sm:p-6" aria-label="Sample confirmed ledger">
+            <figcaption className="mb-4 flex items-baseline justify-between gap-3 text-sm">
+              <span className="font-semibold">Confirmed electricity records</span>
+              <span className="text-xs text-muted">Sample data</span>
+            </figcaption>
+            <table className="w-full text-left text-sm">
+              <thead>
+                <tr className="border-b border-line text-xs text-body">
+                  <th className="pb-2 font-semibold">Month</th>
+                  <th className="pb-2 text-right font-semibold">Quantity (kWh)</th>
+                  <th className="pb-2 text-right font-semibold">Factor</th>
+                  <th className="pb-2 text-right font-semibold">kg CO₂e</th>
+                </tr>
+              </thead>
+              <tbody className="tabular-nums">
+                {sample.map((row) => (
+                  <tr key={row.month} className="border-b border-line last:border-0">
+                    <td className="py-3">{row.month}</td>
+                    <td className="py-3 text-right">{n(row.kwh)}</td>
+                    <td className="py-3 text-right text-body">{FACTOR}</td>
+                    <td className="py-3 text-right font-semibold">{n(row.kg)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <p className="mt-4 border-t border-line pt-4 text-xs leading-6 text-body">kg CO₂e = quantity × emission factor. The factor shown is a demonstration value.</p>
           </figure>
         </section>
 
-        <section id="why-carbontrace" className="scroll-mt-6 bg-[#204B36] text-white">
-          <div className="mx-auto grid max-w-7xl gap-12 px-5 py-16 md:px-8 lg:grid-cols-[0.9fr_1.1fr] lg:py-20">
-            <div><h2 className="max-w-lg text-3xl font-semibold leading-tight tracking-tight sm:text-4xl">Bills tell you what you used.<br />CarbonTrace helps you see what it means.</h2>
-              <p className="mt-6 max-w-lg leading-7 text-white/80">Electricity spreadsheets, fuel logs, and reporting files often live in different places. CarbonTrace brings those records into a common process so teams can connect consumption with emissions and decide what to investigate next.</p>
-              <a href="#workflow" className="mt-7 inline-flex min-h-11 items-center gap-2 font-semibold text-white underline underline-offset-4">See the workflow <ArrowRight size={17} /></a>
-            </div>
-            <div className="space-y-7">
-              {[
-                [Upload, 'Spend less time reconciling scattered files', 'Bring records into a facility ledger, review them before confirmation, and keep the source attached to the workflow.'],
-                [BarChart3, 'Understand changes across reporting periods', 'Compare monthly, quarterly, and yearly emissions to spot changes worth discussing with your operations team.'],
-                [SlidersHorizontal, 'Explore a reduction before making a change', 'Use what-if scenarios to see how a different activity quantity changes calculated emissions without altering original records.'],
-              ].map(([Icon,title,text]) => <article key={title} className="flex gap-4 border-b border-white/20 pb-7 last:border-0 last:pb-0"><Icon size={24} className="mt-1 shrink-0 text-[#A8DBBF]" aria-hidden="true" /><div><h3 className="text-lg font-semibold">{title}</h3><p className="mt-2 text-sm leading-7 text-white/80">{text}</p></div></article>)}
-            </div>
-          </div>
-        </section>
-
-        <section id="who-its-for" className="mx-auto max-w-7xl scroll-mt-6 px-5 py-16 md:px-8 lg:py-20">
-          <div className="flex flex-wrap items-end justify-between gap-5"><h2 className="max-w-xl text-3xl font-semibold tracking-tight sm:text-4xl">Built for the people behind each facility.</h2><p className="max-w-sm text-sm leading-7 text-body">Useful for campus teams and organizations tracking electricity and fuel across multiple sites.</p></div>
-          <div className="mt-10 grid gap-5 md:grid-cols-3">
-            {audiences.map(({icon:Icon,title,need,text,result}) => <article key={title} className="flex flex-col rounded-xl border border-line bg-surface p-6 lg:p-7"><div className="mb-6 flex items-center gap-3"><Icon size={23} className="text-leaf-action" aria-hidden="true" /><h3 className="font-semibold">{title}</h3></div><p className="text-xl font-semibold leading-snug">{need}</p><p className="mb-7 mt-3 text-sm leading-7 text-body">{text}</p><p className="mt-auto flex items-start gap-2 border-t border-line pt-4 text-sm text-leaf-action"><Check size={17} className="mt-1 shrink-0" aria-hidden="true" />{result}</p></article>)}
-          </div>
-        </section>
-
-        <section id="workflow" className="border-y border-line bg-surface">
-          <div className="mx-auto max-w-7xl px-5 py-16 md:px-8">
-            <h2 className="max-w-2xl text-3xl font-semibold tracking-tight sm:text-4xl">From records to a clearer picture.</h2>
-            <div className="mt-10 grid gap-8 md:grid-cols-3">
-              {flow.map(({ icon: Icon, title, text }, index) => (
-                <article key={title} className="border-t border-line pt-6">
-                  <div className="flex items-center justify-between"><Icon className="text-leaf-action" size={24} aria-hidden="true" /><span className="text-sm text-body">Step {index + 1}</span></div>
-                  <h3 className="mt-6 text-xl font-semibold">{title}</h3>
-                  <p className="mt-3 max-w-sm leading-7 text-body">{text}</p>
-                </article>
+        <section id="how-it-works" className="scroll-mt-6 border-y border-line bg-surface">
+          <div className="mx-auto max-w-6xl px-5 py-16 md:px-8">
+            <h2 className="max-w-2xl text-2xl font-semibold tracking-tight sm:text-3xl">How a row becomes a reported number</h2>
+            <ol className="mt-8 divide-y divide-line border-y border-line">
+              {steps.map(([title, text], index) => (
+                <li key={title} className="grid gap-2 py-5 sm:grid-cols-[3rem_9rem_1fr] sm:gap-6">
+                  <span className="text-sm text-muted">{index + 1}</span>
+                  <h3 className="font-semibold">{title}</h3>
+                  <p className="max-w-2xl text-sm leading-7 text-body">{text}</p>
+                </li>
               ))}
-            </div>
+            </ol>
           </div>
         </section>
 
-        <section className="mx-auto grid max-w-7xl gap-10 px-5 py-16 md:px-8 lg:grid-cols-2">
-          <div><h2 className="text-3xl font-semibold tracking-tight">Start with the energy you can measure.</h2><p className="mt-5 max-w-lg leading-7 text-body">CarbonTrace currently covers Scope 1 and Scope 2. Keep fuel and purchased electricity distinct, then bring them together for an emissions overview.</p>
-            <div className="mt-7 grid gap-4 sm:grid-cols-2">{[[Fuel,'Scope 1','Diesel, petrol and LPG','Direct emissions from recorded fuel use.'],[Zap,'Scope 2','Purchased electricity','Indirect emissions calculated from electricity consumption.']].map(([Icon,scope,title,text]) => <div key={scope} className="border-l-2 border-mint pl-4"><Icon size={22} className="mb-3 text-leaf-action" /><p className="text-sm font-semibold text-leaf-action">{scope}</p><h3 className="mt-1 font-semibold">{title}</h3><p className="mt-2 text-sm leading-6 text-body">{text}</p></div>)}</div>
+        <section id="scope" className="mx-auto grid max-w-6xl scroll-mt-6 gap-10 px-5 py-16 md:px-8 lg:grid-cols-2">
+          <div>
+            <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">What it covers</h2>
+            <dl className="mt-6 divide-y divide-line border-y border-line text-sm">
+              <div className="grid gap-1 py-4 sm:grid-cols-[9rem_1fr]"><dt className="font-semibold">Scope 2</dt><dd className="text-body">Purchased electricity, in kWh.</dd></div>
+              <div className="grid gap-1 py-4 sm:grid-cols-[9rem_1fr]"><dt className="font-semibold">Scope 1</dt><dd className="text-body">Diesel and petrol in litres, LPG in kg.</dd></div>
+              <div className="grid gap-1 py-4 sm:grid-cols-[9rem_1fr]"><dt className="font-semibold">Analysis</dt><dd className="text-body">Monthly, quarterly and yearly trends, what-if scenarios on a single record, anomaly flags.</dd></div>
+              <div className="grid gap-1 py-4 sm:grid-cols-[9rem_1fr]"><dt className="font-semibold">Not covered</dt><dd className="text-body">Scope 3, solar offsets and exports (they are not deducted), and third-party verification.</dd></div>
+            </dl>
           </div>
-          <div className="rounded-xl border border-line bg-surface p-6 sm:p-8"><h2 className="mb-4 text-xl font-semibold">Before you get started</h2>
-            {[
-              ['What records can I upload?', 'Import the supported electricity workbook format or activity CSVs. The intake workflow also supports scanned documents for review before confirmation.'],
-              ['Can each manager see only their facility?', 'Yes. Managers work within their assigned facility. Administrators control access and can review all facilities. Assigning an existing facility shares its historical records.'],
-              ['Does this replace verified sustainability reporting?', 'No. Calculations depend on the records and emission factors you use. Check completeness, units and applicable factors before using results for external reporting. Scope 3 is not currently included.'],
-            ].map(([question,answer]) => <details key={question} className="border-t border-line py-4"><summary className="cursor-pointer text-sm font-semibold text-ink">{question}</summary><p className="mt-3 text-sm leading-7 text-body">{answer}</p></details>)}
+          <div>
+            <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">Who can do what</h2>
+            <dl className="mt-6 divide-y divide-line border-y border-line text-sm">
+              {roles.map(([role, text]) => (
+                <div key={role} className="grid gap-1 py-4 sm:grid-cols-[9rem_1fr]"><dt className="font-semibold">{role}</dt><dd className="text-body">{text}</dd></div>
+              ))}
+            </dl>
           </div>
         </section>
-        <section className="mx-auto max-w-7xl px-5 pb-16 md:px-8"><div className="flex flex-wrap items-center justify-between gap-6 rounded-2xl bg-[#E2EFE7] p-8 sm:p-10"><div><h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">Put your facility records to work.</h2><p className="mt-3 text-sm text-body">Create a private workspace or join your team through an email invitation.</p></div><Link to="/signup" className="inline-flex items-center gap-2 rounded-lg bg-leaf-action px-5 py-3 font-semibold text-white hover:bg-leaf-action-hover">Create account <ArrowRight size={18} /></Link></div></section>
+
+        <section className="mx-auto max-w-6xl px-5 pb-16 md:px-8"><div className="max-w-3xl">
+          <h2 className="text-2xl font-semibold tracking-tight">Questions</h2>
+          <div className="mt-4">
+            {faq.map(([question, answer]) => (
+              <details key={question} className="border-t border-line py-4 last:border-b">
+                <summary className="cursor-pointer text-sm font-semibold">{question}</summary>
+                <p className="mt-3 text-sm leading-7 text-body">{answer}</p>
+              </details>
+            ))}
+          </div>
+          <p className="mt-10 text-sm text-body">Ready to try it with a real workbook? <Link to="/signup" className="font-semibold text-leaf-action underline underline-offset-4">Create an account</Link> or <Link to="/login" className="font-semibold text-leaf-action underline underline-offset-4">sign in</Link>.</p>
+        </div></section>
       </main>
 
-      <footer className="mx-auto flex max-w-7xl flex-col gap-3 px-5 py-8 text-sm text-[#68736a] md:flex-row md:items-center md:justify-between md:px-8">
-        <span>CarbonTrace</span>
-        <span>Scope 1 and 2 accounting for facility teams.</span>
-      </footer>
+      <footer className="mx-auto max-w-6xl px-5 py-8 text-sm text-body md:px-8">CarbonTrace · Scope 1 and 2 accounting for facility teams</footer>
     </div>
   );
 }
-

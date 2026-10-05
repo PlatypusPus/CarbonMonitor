@@ -1,144 +1,179 @@
-import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import { useState } from "react";
+import { Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { Link } from "react-router-dom";
 import DateRange from "../components/DateRange";
-import Dropdown from "../components/Dropdown";
-import { formatNumber as fmt } from "../lib/trends";
+import { compactNumber, formatEmissions, formatNumber as fmt, mergeMonthly } from "../lib/trends";
 
-import { useAnomalies, useLatest, useSummary, useTimeseries } from "../api/hooks";
+import { useAnomalies, useLatest, useTimeseries } from "../api/hooks";
 
-const time = (ts) => new Date(ts).toLocaleDateString([], { year: "numeric", month: "short", timeZone: "UTC" });
+const FUEL = ["diesel", "petrol", "lpg"];
+const month = (ts) => new Date(ts).toLocaleDateString([], { year: "numeric", month: "short", timeZone: "UTC" });
+const sum = (rows) => (rows ?? []).reduce((total, row) => total + (row.value ?? 0), 0);
 
-function LivePill() {
-  return (
-    <span className="inline-flex items-center gap-2 rounded-pill border border-mint bg-[#E8F3EC] px-3 py-1 text-xs font-semibold text-leaf">
-      <span className="h-1.5 w-1.5 rounded-full bg-leaf-action" />
-      Confirmed records
-    </span>
+function Stat({ label, kg, note, loading, to }) {
+  const { value, unit } = formatEmissions(kg);
+  const body = (
+    <>
+      <div className="text-xs font-semibold text-body">{label}</div>
+      {loading ? (
+        <div className="mt-3 h-8 w-32 animate-pulse rounded bg-canvas" />
+      ) : (
+        <div className="mt-2 text-2xl font-semibold tabular-nums text-ink">
+          {value}
+          <span className="ml-1 text-xs font-normal text-muted">{unit}</span>
+        </div>
+      )}
+      {note && !loading && <div className="mt-1 text-xs text-muted">{note}</div>}
+    </>
   );
+  const cls = "rounded-card border border-line bg-surface p-5";
+  return to ? <Link to={to} className={`${cls} block hover:border-leaf`}>{body}</Link> : <div className={cls}>{body}</div>;
 }
 
-function StatCard({ label, value, unit, accent = "mint" }) {
-  const border = accent === "peach" ? "border-t-peach" : "border-t-mint";
-  return (
-    <div className={`rounded-card border border-line border-t-2 ${border} bg-surface p-5`}>
-      <div className="text-xs text-muted">{label}</div>
-      <div className="mt-3 text-2xl font-semibold tabular-nums tracking-tight text-ink">
-        {value}
-        {unit && <span className="ml-1 text-xs text-muted">{unit}</span>}
-      </div>
-    </div>
-  );
-}
-
-function ChartCard({ series }) {
-  const points = (series.data ?? []).map((p) => ({ t: time(p.timestamp), value: p.value }));
+function Change({ months, loading }) {
+  const last = months.at(-1);
+  const prev = months.at(-2);
+  const total = (m) => (m?.scope1 ?? 0) + (m?.scope2 ?? 0);
+  let note = "Needs at least two months of data";
+  let text = "-";
+  if (!loading && last && prev && total(prev) > 0) {
+    const pct = ((total(last) - total(prev)) / total(prev)) * 100;
+    text = `${pct >= 0 ? "+" : "-"}${Math.abs(pct).toFixed(1)}%`;
+    note = `${last.label} vs ${prev.label}`;
+  }
   return (
     <div className="rounded-card border border-line bg-surface p-5">
-      <div className="mb-3 flex items-center justify-between">
-        <span className="text-sm font-semibold text-ink">CO₂ trend</span>
-        <span className="font-mono text-xs text-muted">kg CO₂e</span>
-      </div>
-      {series.isLoading ? (
-        <div className="h-56 animate-pulse rounded-lg bg-canvas" />
-      ) : points.length === 0 ? (
-        <div className="grid h-56 place-items-center rounded-lg border border-dashed border-line text-sm text-muted">
-          No data for this range
-        </div>
-      ) : (
-        <ResponsiveContainer width="100%" height={224}>
-          <AreaChart data={points} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
-            <defs>
-              <linearGradient id="co2" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#2E9E6B" stopOpacity={0.22} />
-                <stop offset="100%" stopColor="#2E9E6B" stopOpacity={0} />
-              </linearGradient>
-            </defs>
-            <CartesianGrid stroke="#ECF1EE" vertical={false} />
-            <XAxis dataKey="t" tick={{ fontSize: 11, fill: "#A8A89F" }} tickLine={false} axisLine={false} />
-            <YAxis tickFormatter={fmt} tick={{ fontSize: 11, fill: "#55554F" }} tickLine={false} axisLine={false} width={92} />
-            <Tooltip formatter={(value) => [fmt(value), "kg CO₂e"]} />
-            <Area type="monotone" dataKey="value" stroke="#2E9E6B" strokeWidth={2.5} fill="url(#co2)" />
-          </AreaChart>
-        </ResponsiveContainer>
-      )}
+      <div className="text-xs font-semibold text-body">Latest month vs previous</div>
+      {loading ? <div className="mt-3 h-8 w-24 animate-pulse rounded bg-canvas" /> : <div className="mt-2 text-2xl font-semibold tabular-nums text-ink">{text}</div>}
+      {!loading && <div className="mt-1 text-xs text-muted">{note}</div>}
     </div>
   );
 }
 
-function SensorFeed({ feed }) {
+function MonthlyChart({ months, loading }) {
+  return (
+    <section className="rounded-card border border-line bg-surface p-5" aria-label="Monthly emissions by scope">
+      <div className="mb-3 flex items-baseline justify-between gap-3">
+        <h2 className="text-sm font-semibold text-ink">Monthly emissions by scope</h2>
+        <span className="text-xs text-muted">kg CO₂e</span>
+      </div>
+      {loading ? (
+        <div className="h-60 animate-pulse rounded-lg bg-canvas" />
+      ) : (
+        <>
+          <ResponsiveContainer width="100%" height={240}>
+            <BarChart data={months} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
+              <CartesianGrid stroke="#E6E6E0" vertical={false} />
+              <XAxis dataKey="label" tick={{ fontSize: 12, fill: "#55554F" }} tickLine={false} axisLine={false} />
+              <YAxis tickFormatter={compactNumber} tick={{ fontSize: 12, fill: "#55554F" }} tickLine={false} axisLine={false} width={48} />
+              <Tooltip formatter={(value, name) => [fmt(value), name]} contentStyle={{ borderRadius: 12, borderColor: "#CBD8D0" }} cursor={{ fill: "#F4F7F5" }} />
+              <Legend iconType="square" wrapperStyle={{ fontSize: 12 }} />
+              <Bar dataKey="scope2" name="Scope 2 (electricity)" stackId="co2" fill="#236F4B" maxBarSize={48} />
+              <Bar dataKey="scope1" name="Scope 1 (fuel)" stackId="co2" fill="#AD6228" radius={[4, 4, 0, 0]} maxBarSize={48} />
+            </BarChart>
+          </ResponsiveContainer>
+          <details className="mt-3 border-t border-line pt-3">
+            <summary className="cursor-pointer text-sm font-semibold text-leaf-action">View monthly values</summary>
+            <table className="mt-3 w-full text-left text-sm">
+              <thead><tr className="text-body"><th className="py-2">Month</th><th className="text-right">Scope 1</th><th className="text-right">Scope 2</th></tr></thead>
+              <tbody>{months.map((m) => <tr key={m.key} className="border-t border-line"><td className="py-2">{m.label}</td><td className="text-right tabular-nums">{m.scope1 === undefined ? "-" : fmt(m.scope1)}</td><td className="text-right tabular-nums">{m.scope2 === undefined ? "-" : fmt(m.scope2)}</td></tr>)}</tbody>
+            </table>
+          </details>
+        </>
+      )}
+    </section>
+  );
+}
+
+function RecentRecords({ feed }) {
   const rows = feed.data ?? [];
   return (
-    <div className="rounded-card border border-line bg-surface p-5">
-      <div className="mb-3 text-sm font-semibold text-ink">Recent activity records</div>
-      <div className="flex max-h-72 flex-col gap-1 overflow-auto">
-        {rows.length === 0 && <div className="text-sm text-muted">No recent readings.</div>}
-        {rows.map((r, i) => (
-          <div key={i} className="flex items-center gap-3 rounded-lg px-2 py-2 hover:bg-canvas">
-            <span className="h-2 w-2 flex-none rounded-full bg-leaf" />
-            <div className="min-w-0 flex-1">
-              <div className="truncate text-sm text-ink">{r.facility_name ?? r.region ?? r.source}</div>
-              <div className="font-mono text-xs text-muted">
-                {r.metric} · {time(r.timestamp)}
+    <section className="rounded-card border border-line bg-surface p-5" aria-label="Recent confirmed records">
+      <h2 className="mb-3 text-sm font-semibold text-ink">Recent confirmed records</h2>
+      {feed.isLoading ? (
+        <div className="h-48 animate-pulse rounded-lg bg-canvas" />
+      ) : rows.length === 0 ? (
+        <p className="text-sm text-muted">No confirmed records in this range.</p>
+      ) : (
+        <ul className="flex flex-col divide-y divide-line">
+          {rows.map((r, i) => (
+            <li key={i} className="flex items-center justify-between gap-3 py-2.5">
+              <div className="min-w-0">
+                <div className="truncate text-sm text-ink">{r.facility_name ?? "Facility"}</div>
+                <div className="text-xs capitalize text-muted">{r.metric} · {month(r.timestamp)}</div>
               </div>
-            </div>
-            <div className="font-mono text-sm text-ink">
-              {fmt(r.value)} <span className="text-xs text-muted">{r.unit}</span>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
+              <div className="text-right text-sm tabular-nums text-ink">{fmt(r.value)} <span className="text-xs text-muted">kg CO₂e</span></div>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
   );
 }
 
 export default function Dashboard() {
-  const summary = useSummary();
-  const [metric, setMetric] = useState("electricity");
+  const electricity = useTimeseries({ metric: "electricity", interval: "1mo" });
+  const diesel = useTimeseries({ metric: "diesel", interval: "1mo" });
+  const petrol = useTimeseries({ metric: "petrol", interval: "1mo" });
+  const lpg = useTimeseries({ metric: "lpg", interval: "1mo" });
+  const feed = useLatest({ limit: 8 });
   const anomalies = useAnomalies({ limit: 200 });
-  // metric matches ActivityRecord.activity_type (electricity/diesel/...)
-  const defaultMetric = metric;
-  const series = useTimeseries({ metric: defaultMetric, interval: "1mo" });
-  const feed = useLatest({ metric: defaultMetric, limit: 200 });
 
-  const metrics = (summary.data ?? []).slice(0, 3);
+  const queries = [electricity, diesel, petrol, lpg];
+  const loading = queries.some((q) => q.isLoading);
+  const failed = [...queries, feed, anomalies].filter((q) => q.isError);
+  const scope2 = sum(electricity.data);
+  const scope1 = sum(diesel.data) + sum(petrol.data) + sum(lpg.data);
+  const total = scope1 + scope2;
+  const months = mergeMonthly({
+    scope2: electricity.data,
+    scope1: [...(diesel.data ?? []), ...(petrol.data ?? []), ...(lpg.data ?? [])],
+  });
+  const empty = !loading && !failed.length && months.length === 0;
+  const flags = anomalies.data?.length ?? 0;
+  const share = (part) => (total > 0 ? `${((part / total) * 100).toFixed(0)}% of total` : undefined);
 
   return (
     <div className="flex flex-col gap-5">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-ink">Emissions overview</h1>
-          <p className="text-sm text-muted">Confirmed activity records and monthly emissions</p>
+          <p className="text-sm text-muted">Confirmed monthly activity, Scope 1 and Scope 2</p>
         </div>
-        <div className="flex flex-wrap items-center gap-3"><LivePill /><Link to="/upload" className="rounded-lg bg-leaf-action px-4 py-3 text-sm font-semibold text-white hover:bg-leaf-action-hover">Add activity</Link></div>
+        <Link to="/upload" className="rounded-lg bg-leaf-action px-4 py-3 text-sm font-semibold text-white hover:bg-leaf-action-hover">Add activity</Link>
       </div>
 
       <DateRange />
-      <div className="max-w-xs"><p className="mb-2 text-xs font-semibold text-body">Chart and activity type</p><Dropdown label="Chart and activity type" value={metric} onChange={setMetric} options={['electricity', 'diesel', 'petrol', 'lpg'].map((type) => ({value:type,label:`${type} (Scope ${type === 'electricity' ? '2' : '1'})`}))} /></div>
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <StatCard label={`Total ${defaultMetric} emissions`} value={series.data ? fmt(series.data.reduce((total, row) => total + (row.value ?? 0), 0)) : "-"} unit="kg CO2e" />
-        {metrics.map((m) => (
-          <StatCard key={m.metric} label={`Latest ${m.metric} record`} value={fmt(m.latest_value)} unit={m.unit} />
-        ))}
-        <StatCard label="Confirmed records" value={summary.data ? summary.data.reduce((total, item) => total + item.count, 0) : "-"} />
-        <StatCard
-          label="Flagged records (all dates)"
-          value={anomalies.data?.length ?? "-"}
-          unit="flags"
-          accent="peach"
-        />
-      </div>
 
-      {[summary, anomalies, series, feed].some((query) => query.isError) && (
-        <p role="alert" className="text-sm text-rose">Some emissions data could not be loaded. <button className="underline" onClick={() => [summary, anomalies, series, feed].forEach((query) => query.refetch())}>Retry</button></p>
+      {failed.length > 0 && (
+        <p role="alert" className="text-sm text-rose">Some emissions data could not be loaded. <button className="underline" onClick={() => failed.forEach((q) => q.refetch())}>Retry</button></p>
       )}
 
-      <div className="grid gap-4 lg:grid-cols-3">
-        <div className="lg:col-span-2">
-          <ChartCard series={series} />
+      {flags > 0 && (
+        <Link to="/anomalies" className="rounded-lg border border-peach bg-surface px-4 py-3 text-sm text-ink hover:bg-canvas">
+          <strong>{flags >= 200 ? "200+" : flags} flagged {flags === 1 ? "record" : "records"}</strong> may need a second look. Review anomalies →
+        </Link>
+      )}
+
+      {empty ? (
+        <div className="rounded-card border border-dashed border-line bg-surface p-10 text-center">
+          <h2 className="font-semibold text-ink">No confirmed records yet</h2>
+          <p className="mx-auto mt-2 max-w-md text-sm text-body">Upload an electricity workbook or fuel CSV, review the rows, and confirm them. Only confirmed rows appear here.</p>
+          <Link to="/upload" className="mt-5 inline-block rounded-lg bg-leaf-action px-4 py-3 text-sm font-semibold text-white hover:bg-leaf-action-hover">Go to data intake</Link>
         </div>
-        <SensorFeed feed={feed} />
-      </div>
+      ) : (
+        <>
+          <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+            <Stat label="Total emissions" kg={total} loading={loading} />
+            <Stat label="Scope 1 · fuel" kg={scope1} note={share(scope1)} loading={loading} />
+            <Stat label="Scope 2 · electricity" kg={scope2} note={share(scope2)} loading={loading} />
+            <Change months={months} loading={loading} />
+          </div>
+          <div className="grid gap-4 lg:grid-cols-3">
+            <div className="min-w-0 lg:col-span-2"><MonthlyChart months={months} loading={loading} /></div>
+            <RecentRecords feed={feed} />
+          </div>
+        </>
+      )}
     </div>
   );
 }

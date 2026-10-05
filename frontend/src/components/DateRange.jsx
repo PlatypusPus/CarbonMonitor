@@ -9,6 +9,6 @@ export default function DateRange() {
         className="w-full min-w-0 sm:w-44" />
     </label>)}
     <button onClick={() => setDates({ start_date: "", end_date: "" })} className="button-secondary">All dates</button>
-    <p className="w-full text-xs text-body">Filters use each record's reporting-period start date (UTC). Monthly totals are not daily or hourly readings.</p>
+    <p className="w-full text-xs text-body">Filters by each record's reporting month (UTC).</p>
   </div>;
 }

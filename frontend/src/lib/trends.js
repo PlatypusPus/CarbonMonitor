@@ -19,3 +19,28 @@ export function groupPeriods(rows, interval) {
   }
   return [...buckets.values()].sort((a, b) => a.key - b.key);
 }
+
+// kg below 1,000, tonnes above, so headline numbers stay readable.
+export function formatEmissions(kg) {
+  if (typeof kg !== 'number' || !Number.isFinite(kg)) return { value: '-', unit: 'kg CO₂e' };
+  return Math.abs(kg) >= 1000
+    ? { value: formatNumber(kg / 1000), unit: 't CO₂e' }
+    : { value: formatNumber(kg), unit: 'kg CO₂e' };
+}
+
+export const compactNumber = (value) => new Intl.NumberFormat('en', { notation: 'compact', maximumFractionDigits: 1 }).format(value);
+
+// Merge per-metric monthly series into rows of { key: 'YYYY-MM', label, [series]: kg }.
+export function mergeMonthly(seriesByName) {
+  const months = new Map();
+  for (const [name, rows] of Object.entries(seriesByName)) {
+    for (const row of rows ?? []) {
+      const date = new Date(row.timestamp);
+      const key = `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}`;
+      const month = months.get(key) ?? { key, label: date.toLocaleDateString('en', { month: 'short', year: '2-digit', timeZone: 'UTC' }) };
+      month[name] = (month[name] ?? 0) + (row.value ?? 0);
+      months.set(key, month);
+    }
+  }
+  return [...months.values()].sort((a, b) => a.key.localeCompare(b.key));
+}
