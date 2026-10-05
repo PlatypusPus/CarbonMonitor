@@ -45,7 +45,7 @@ export default function ESGReport() {
             activity calculations, and data quality notes. Pending drafts are excluded.
           </p>
         </div>
-        {error && <p className="text-sm text-rose">{error}</p>}
+        {error && <p role="alert" className="text-sm text-rose">{error}</p>}
         <button
           onClick={downloadReport}
           disabled={loading}

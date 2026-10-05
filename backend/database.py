@@ -275,7 +275,7 @@ def _seed_defaults() -> None:
             ("electricity", 0.82, "kg CO2e / kWh"),
             ("diesel", 2.68, "kg CO2e / litre"),
             ("petrol", 2.31, "kg CO2e / litre"),
-            ("lpg", 1.51, "kg CO2e / kg"),
+            ("lpg", 2.94, "kg CO2e / kg"),
         ]
         for activity_type, factor_value, unit in defaults:
             if not db.query(EmissionFactor).filter(
@@ -292,4 +292,10 @@ def _seed_defaults() -> None:
                     )
                 )
 
+        # LPG was seeded at 1.51 (a per-litre figure) against a per-kg unit.
+        db.query(EmissionFactor).filter(
+            EmissionFactor.activity_type == "lpg",
+            EmissionFactor.region.is_(None),
+            EmissionFactor.factor_value == 1.51,
+        ).update({"factor_value": 2.94})
         db.commit()

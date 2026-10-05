@@ -2,7 +2,7 @@
 
 import csv
 import io
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 from typing import Any
 from uuid import UUID
 
@@ -71,28 +71,23 @@ def parse_emissions_csv(content: bytes) -> list[dict[str, Any]]:
 
 
 def convert_xlsx_to_csv_bytes(content: bytes) -> bytes:
-    """Convert xlsx (MescomBill format) to CSV with timestamp/metric/value/unit/facility_name."""
-    from openpyxl import load_workbook
+    """Convert an electricity workbook to CSV rows.
 
-    wb = load_workbook(io.BytesIO(content), read_only=True, data_only=True)
-    ws = wb[wb.sheetnames[0]]
+    Uses the same header-based parser and quantity rule as the Excel intake path
+    and the preview, so all three agree on which column is the activity quantity.
+    """
+    from services.excel.normalizer import normalize_workbook, select_activity_quantity
+    from services.excel.parser import parse_workbook
+
     buf = io.StringIO()
     writer = csv.writer(buf)
     writer.writerow(["timestamp", "metric", "value", "unit", "facility_name"])
-
-    epoch = datetime(1899, 12, 30, tzinfo=timezone.utc)
-    for row in ws.iter_rows(min_row=2, values_only=True):
-        month_val = row[0]  # column A: datetime or serial number
-        total_units = row[19]  # column T: Total Units (0-indexed)
-        if month_val is None or total_units is None:
+    for record in normalize_workbook(parse_workbook(content, filename="upload.xlsx")):
+        quantity, unit, _ = select_activity_quantity(record)
+        if quantity is None:
             continue
-        # openpyxl may return datetime or int/float serial
-        if hasattr(month_val, "isoformat"):
-            dt = month_val.replace(tzinfo=timezone.utc) if month_val.tzinfo is None else month_val
-        else:
-            dt = epoch + timedelta(days=int(month_val))
-        writer.writerow([dt.isoformat(), "electricity", total_units, "kWh", ""])
-
+        dt = datetime.combine(record.period_start, datetime.min.time(), tzinfo=timezone.utc)
+        writer.writerow([dt.isoformat(), "electricity", quantity, unit, ""])
     return buf.getvalue().encode("utf-8")
 
 

@@ -2,11 +2,14 @@
 
 from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from database import get_db
 from dependencies import get_current_user, require_role, check_facility_access
+from models.activity_record import ActivityRecord
 from models.facility import Facility
+from models.ocr_draft import OCRDraft
 from models.user import User
 from schemas.facility import FacilityCreate, FacilityResponse, FacilityUpdate
 
@@ -93,5 +96,20 @@ def delete_facility(
     facility = db.get(Facility, facility_id)
     if facility is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Facility not found")
+    in_use = (
+        db.query(User.id).filter(User.facility_id == facility_id).first()
+        or db.query(ActivityRecord.id).filter(ActivityRecord.facility_id == facility_id).first()
+        or db.query(OCRDraft.id).filter(OCRDraft.facility_id == facility_id).first()
+    )
+    conflict = HTTPException(
+        status_code=status.HTTP_409_CONFLICT,
+        detail="This facility still has users or records. Reassign or remove them first.",
+    )
+    if in_use:
+        raise conflict
     db.delete(facility)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:  # some other table still references it
+        db.rollback()
+        raise conflict from None

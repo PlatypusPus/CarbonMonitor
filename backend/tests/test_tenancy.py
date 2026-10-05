@@ -114,6 +114,12 @@ def test_facility_isolation_and_admin_user_lifecycle():
             assert client.post("/api/upload", headers=mh, files=csv).status_code == 201
             assert client.post(f"/api/activity/ocr/{drafts[0].id}/confirm", headers=mh).status_code == 201
             assert len(client.get("/api/activity", headers=ah).json()) == 3
+            # A document that names its facility must work for that facility's manager (no form facility_id).
+            doc = "facility_id,period_start,period_end,activity_type,quantity,unit\n{},2026-07-01,2026-08-01,electricity,10,kWh\n"
+            own = {"file": ("own.csv", doc.format(alpha.id).encode(), "text/csv")}
+            other = {"file": ("other.csv", doc.format(beta.id).encode(), "text/csv")}
+            assert client.post("/api/activity/ocr", headers=mh, files=own).status_code == 201
+            assert client.post("/api/activity/ocr", headers=mh, files=other).status_code == 403
             payload = {"email": "new@example.com", "full_name": "New manager", "password": "new-password", "facility_id": str(beta.id)}
             assert client.post("/api/users", headers=mh, json=payload).status_code == 403
             response = client.post("/api/users", headers=ah, json=payload)
@@ -133,6 +139,34 @@ def test_facility_isolation_and_admin_user_lifecycle():
             assert client.patch(f"/api/users/{new_id}", headers=ah, json={"is_active": False}).status_code == 200
             assert client.get("/api/activity", headers=nh).status_code == 401
             assert client.patch(f"/api/users/{admin.id}", headers=ah, json={"is_active": False}).status_code == 409
+        finally:
+            app.dependency_overrides.clear()
+            client.close()
+    engine.dispose()
+
+
+def test_deleting_a_facility_with_users_is_a_conflict_not_a_500():
+    from sqlalchemy import event
+
+    engine = create_engine("sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool)
+    event.listen(engine, "connect", lambda conn, _: conn.execute("PRAGMA foreign_keys=ON"))
+    Base.metadata.create_all(engine)
+    with Session(engine) as db:
+        admin_role, manager_role = Role(name="admin"), Role(name="facility_manager")
+        site, empty = Facility(name="Occupied"), Facility(name="Empty")
+        db.add_all([admin_role, manager_role, site, empty])
+        db.flush()
+        admin = User(email="a@example.com", hashed_password="x", role=admin_role)
+        db.add_all([admin, User(email="m@example.com", hashed_password="x", role=manager_role, facility_id=site.id)])
+        db.commit()
+        def session():
+            yield db
+        app.dependency_overrides[get_db] = session
+        client = TestClient(app)
+        ah = {"Authorization": "Bearer " + create_access_token(str(admin.id), "admin")}
+        try:
+            assert client.delete(f"/api/facilities/{site.id}", headers=ah).status_code == 409
+            assert client.delete(f"/api/facilities/{empty.id}", headers=ah).status_code == 204
         finally:
             app.dependency_overrides.clear()
             client.close()

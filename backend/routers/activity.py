@@ -110,8 +110,9 @@ async def create_ocr_draft(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                 detail="missing required facility context: supply facility_id, include it in the document, or attach a facility to the user",
             )
-        # Enforce scope check on the effective facility
-        check_facility_access(user, UUID(str(effective_facility_id)))
+        # Enforce scope check on the effective facility (document ids arrive as str)
+        effective_facility_id = UUID(str(effective_facility_id))
+        check_facility_access(user, effective_facility_id)
         if user.role.name != "admin":
             if user.facility_id is None or user.facility_id != effective_facility_id:
                 raise HTTPException(

@@ -2,13 +2,9 @@ import { useAnomalies } from "../api/hooks";
 
 const fmt = (n, d = 2) =>
   typeof n === "number" ? n.toLocaleString(undefined, { maximumFractionDigits: d }) : "-";
+// Anomalies are tied to monthly periods, so show the UTC date only (no time of day).
 const ts = (t) =>
-  new Date(t).toLocaleString([], {
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  new Date(t).toLocaleDateString([], { year: "numeric", month: "short", day: "numeric", timeZone: "UTC" });
 
 function ScoreBadge({ score }) {
   const high = score < -0.1;
@@ -32,7 +28,7 @@ export default function Anomalies() {
       <div>
         <h1 className="text-2xl font-bold text-ink">Anomaly Log</h1>
         <p className="text-sm text-muted">
-          Isolation Forest flagged emission spikes from the last 7 days
+          Isolation Forest flags unusual emission records for each facility and activity type
         </p>
       </div>
 
