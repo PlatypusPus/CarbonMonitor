@@ -1,4 +1,5 @@
-import { ArrowRight, BarChart3, Building2, FileUp, Leaf, Radio } from "lucide-react";
+import Wordmark from "../components/Wordmark";
+import { ArrowRight, BarChart3, Building2, FileUp, Radio } from "lucide-react";
 import { useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
 
@@ -33,7 +34,7 @@ export default function Onboarding() {
   return (
     <main className="min-h-[100dvh] bg-canvas px-5 py-8 text-ink md:px-8">
       <div className="mx-auto max-w-5xl">
-        <div className="flex items-center gap-2 font-bold"><span className="grid h-9 w-9 place-items-center rounded-lg bg-leaf text-white"><Leaf size={18} /></span>CarbonTrace</div>
+        <Wordmark className="text-lg" />
 
         <div className="mt-12 grid gap-10 lg:grid-cols-[0.7fr_1.3fr]">
           <section>

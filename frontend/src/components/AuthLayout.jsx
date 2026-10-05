@@ -1,4 +1,5 @@
-import { ArrowLeft, Eye, EyeOff, Leaf } from 'lucide-react';
+import { ArrowLeft, Eye, EyeOff } from 'lucide-react';
+import Wordmark from './Wordmark';
 import { useState } from 'react';
 import { Link, NavLink } from 'react-router-dom';
 import facilityHero from '../assets/carbontrace-facility-hero.png';
@@ -6,7 +7,7 @@ import facilityHero from '../assets/carbontrace-facility-hero.png';
 export default function AuthLayout({ title, description, children }) {
   return <main className="auth-layout min-h-screen bg-surface text-ink lg:grid lg:grid-cols-2">
     <aside className="hidden bg-[#204B36] text-white lg:flex lg:flex-col lg:px-12 lg:py-10 xl:px-16">
-      <Link to="/" className="flex w-fit items-center gap-3 text-xl font-semibold tracking-tight"><Leaf size={28} aria-hidden="true" />CarbonTrace</Link>
+      <Link to="/" className="w-fit text-xl" aria-label="CarbonTrace home"><Wordmark /></Link>
       <div className="my-12 max-w-lg xl:my-16">
         <h2 className="text-4xl font-semibold leading-[1.12] tracking-tight xl:text-5xl">A clearer view of your facility’s footprint.</h2>
         <p className="mt-5 max-w-md leading-7 text-white/80">Bring electricity and fuel records together. Understand your emissions and plan your next reduction.</p>
@@ -19,7 +20,7 @@ export default function AuthLayout({ title, description, children }) {
     <section className="px-6 py-8 sm:px-12 lg:px-10 lg:py-10 xl:px-16" aria-labelledby="auth-title">
       <div className="mx-auto w-full max-w-md">
         <div className="mb-8 flex items-center justify-between gap-4">
-          <Link to="/" className="flex items-center gap-2 font-semibold lg:hidden"><Leaf size={24} className="text-leaf-action" aria-hidden="true" />CarbonTrace</Link>
+          <Link to="/" className="text-lg text-leaf-action lg:hidden" aria-label="CarbonTrace home"><Wordmark /></Link>
           <Link to="/" className="ml-auto inline-flex min-h-11 items-center gap-2 text-sm font-medium text-body hover:text-leaf-action"><ArrowLeft size={16} aria-hidden="true" />Back to home</Link>
         </div>
         <nav aria-label="Account access" className="mb-8 grid grid-cols-2 border-b border-line">

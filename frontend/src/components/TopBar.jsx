@@ -1,9 +1,10 @@
-import { Building2, LogOut, ShieldCheck, Leaf } from "lucide-react";
+import { Building2, LogOut, ShieldCheck } from "lucide-react";
 
 import { useAuth } from "../context/AuthContext";
 import { useWorkspace } from "../context/WorkspaceContext";
 import { useFacilities } from "../api/hooks";
 import Dropdown from "./Dropdown";
+import Wordmark from "./Wordmark";
 import { Link } from "react-router-dom";
 
 export default function TopBar() {
@@ -17,10 +18,7 @@ export default function TopBar() {
     <header className="workspace-header relative z-30 flex shrink-0 flex-wrap items-stretch border-b border-line bg-surface">
       <a href="#main-content" className="skip-link">Skip to content</a>
       <Link to="/dashboard" aria-label="CarbonTrace overview" className="flex min-h-20 w-full shrink-0 items-center gap-2 px-5 md:w-[232px] md:border-r md:border-line">
-        <div className="grid h-10 w-10 place-items-center rounded-xl bg-leaf-action text-white">
-          <Leaf size={22} aria-hidden="true" />
-        </div>
-        <div><span className="text-lg font-bold tracking-tight text-ink">CarbonTrace</span><p className="text-xs text-body">Emissions workspace</p></div>
+        <div><Wordmark className="text-lg text-ink" /><p className="text-xs text-body">Emissions workspace</p></div>
       </Link>
       <div className="flex min-w-0 flex-1 flex-wrap items-center gap-3 px-4 pb-4 md:px-7 md:py-3">
         <div className="flex min-w-0 items-center gap-2 text-sm">

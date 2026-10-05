@@ -59,7 +59,7 @@ export default function Scenarios() {
                 <label htmlFor="scenario-quantity" className="text-sm font-medium">Proposed quantity ({record.unit})</label>
                 <input id="scenario-quantity" type="number" min="0" step="any" required value={quantity}
                   disabled={preview.isPending} onChange={(event) => changeQuantity(event.target.value)}
-                  className="w-full rounded-lg border border-line bg-canvas p-3 font-mono" />
+                  className="w-full rounded-lg border border-line bg-canvas p-3 tabular-nums" />
                 <div className="flex flex-wrap gap-2">
                   {[10, 20, 30].map((reduction) => <button key={reduction} type="button" disabled={preview.isPending}
                     onClick={() => changeQuantity(inputQuantity(record.quantity * (1 - reduction / 100)))}
@@ -81,7 +81,7 @@ export default function Scenarios() {
                 <dl className="mt-4 divide-y divide-line">
                   {[['Recorded emissions', result.baseline_co2e_kg], ['Projected emissions', result.projected_co2e_kg],
                     [result.savings_co2e_kg >= 0 ? 'Potential reduction' : 'Potential increase', Math.abs(result.savings_co2e_kg)]].map(([label, value]) => (
-                    <div key={label} className="flex flex-wrap justify-between gap-2 py-4"><dt className="text-sm">{label}</dt><dd className="font-mono font-semibold text-ink">{number(value)} kg CO2e</dd></div>
+                    <div key={label} className="flex flex-wrap justify-between gap-2 py-4"><dt className="text-sm">{label}</dt><dd className="tabular-nums font-semibold text-ink">{number(value)} kg CO2e</dd></div>
                   ))}
                 </dl>
                 <p className="mt-3 text-sm font-semibold text-leaf-deep">{result.savings_percent === null ? "Percentage change is unavailable for a zero-emission baseline." : `${number(Math.abs(result.savings_percent))}% ${result.savings_percent >= 0 ? "lower" : "higher"} emissions`}</p>

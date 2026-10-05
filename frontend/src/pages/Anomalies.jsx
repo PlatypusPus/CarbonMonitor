@@ -56,18 +56,18 @@ export default function Anomalies() {
             <tbody>
               {rows.map((r, i) => (
                 <tr key={i} className="border-b border-line last:border-0 hover:bg-canvas">
-                  <td className="whitespace-nowrap px-4 py-3 font-mono text-xs text-muted">
+                  <td className="whitespace-nowrap px-4 py-3 tabular-nums text-xs text-muted">
                     {r.timestamp ? ts(r.timestamp) : "-"}
                   </td>
-                  <td className="px-4 py-3 font-mono text-xs text-ink">{r.metric ?? "-"}</td>
+                  <td className="px-4 py-3 tabular-nums text-xs text-ink">{r.metric ?? "-"}</td>
                   <td className="px-4 py-3 text-ink">
                     {r.facility_name ?? r.source ?? r.region ?? "-"}
                   </td>
-                  <td className="px-4 py-3 font-mono text-ink">
+                  <td className="px-4 py-3 tabular-nums text-ink">
                     {fmt(r.value)}{" "}
                     <span className="text-xs text-muted">{r.unit}</span>
                   </td>
-                  <td className="px-4 py-3 font-mono text-muted">{fmt(r.expected_value)}</td>
+                  <td className="px-4 py-3 tabular-nums text-muted">{fmt(r.expected_value)}</td>
                   <td className="px-4 py-3">
                     {r.anomaly_score != null ? <ScoreBadge score={r.anomaly_score} /> : "-"}
                   </td>
