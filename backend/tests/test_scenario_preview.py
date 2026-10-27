@@ -12,7 +12,6 @@ from models.activity_record import ActivityRecord
 from models.calculated_emission import CalculatedEmission
 from models.emission_factor import EmissionFactor
 from models.facility import Facility
-from models.scenario import Scenario
 from routers.scenarios import preview_scenario
 from schemas.scenario import ScenarioPreview
 
@@ -45,7 +44,6 @@ def test_preview_uses_record_factor_and_never_changes_ledger():
             assert result.factor_value == 0.82
         assert record.quantity == 100 and emission.co2e_kg == 82
         assert db.query(ActivityRecord).count() == db.query(CalculatedEmission).count() == 1
-        assert db.query(Scenario).count() == 0
         outsider = SimpleNamespace(role=SimpleNamespace(name="facility_manager"), facility_id=uuid4())
         with pytest.raises(HTTPException) as error:
             preview_scenario(ScenarioPreview(activity_record_id=record.id, quantity=80), db, outsider)

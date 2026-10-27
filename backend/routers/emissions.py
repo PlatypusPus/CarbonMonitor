@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 from database import get_db
 from dependencies import get_current_user, facility_scope
 from models.user import User
-from schemas.emissions import CrossVerifyPoint, EmissionRecord, MetricSummary, TimeseriesPoint
+from schemas.emissions import EmissionRecord, MetricSummary, TimeseriesPoint
 from services import emissions as emissions_service
 
 router = APIRouter()
@@ -61,14 +61,3 @@ def summary(
 ) -> Any:
     return emissions_service.query_summary(db, facility_id=scope, start=dates[0], end=dates[1])
 
-
-@router.get("/crossverify", response_model=list[CrossVerifyPoint])
-def crossverify(
-    metric: str,
-    interval: str = "1d",
-    source: str | None = None,
-    db: Session = Depends(get_db),
-    _user: User = Depends(get_current_user),
-    scope: UUID | None = Depends(facility_scope),
-) -> Any:
-    return emissions_service.query_crossverify(db, metric, interval, source, facility_id=scope)

@@ -16,23 +16,19 @@ from models.activity_record import ActivityRecord
 from models.calculated_emission import CalculatedEmission
 from models.emission_factor import EmissionFactor
 from models.facility import Facility
-from models.period import Period
 from routers.calculations import calculate_record
-from routers.scenarios import run_scenario_endpoint
 from schemas.activity_record import ActivityRecordCreate
-from schemas.scenario import ScenarioCreate
 from services.scenario import run_scenario
 from services.uploads import parse_emissions_csv
 
 
-def test_calculation_retry_regional_factor_and_scenario():
+def test_calculation_retry_and_regional_factor():
     engine = create_engine("sqlite://")
     Base.metadata.create_all(engine)
     with Session(engine) as db:
         start, end = datetime(2026, 1, 1), datetime(2026, 2, 1)
         facility = Facility(name="Regression", region_code="TEST")
-        period = Period(name="Test month", start_date=start, end_date=end)
-        db.add_all([facility, period])
+        db.add(facility)
         db.flush()
         for region, value, valid_from in [(None, 0.82, start), ("TEST", 0.1, start),
                                            ("TEST", 0.2, datetime(2026, 3, 1))]:
@@ -50,11 +46,6 @@ def test_calculation_retry_regional_factor_and_scenario():
         assert first.id == second.id
         assert db.scalars(select(CalculatedEmission)).all() == [first]
         assert first.co2e_kg == 10
-        scenario = run_scenario_endpoint(ScenarioCreate(
-            facility_id=facility.id, baseline_period_id=period.id,
-            modified_inputs={"quantity": 50}), db, user)
-        assert scenario.result_co2e_kg == 5
-        assert str(record.id) in scenario.modified_inputs
         assert db.scalars(select(CalculatedEmission)).all() == [first]
         with pytest.raises(ValueError):
             run_scenario(db, {"activity_type": "electricity", "quantity": 1, "unit": "kWh"},

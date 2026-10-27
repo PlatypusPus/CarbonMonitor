@@ -1,12 +1,8 @@
 """Isolation Forest anomaly detection over emission readings.
 
 The detect() function is pure and framework-independent — keep it that way.
-
-TODO: _fetch_recent(), run_detection(), and query_anomalies() previously used Elasticsearch
-(emissions-live / emissions-anomalies indices). ES has been removed. Migrate to:
-  - _fetch_recent()    → query calculated_emissions from Postgres for the trailing window
-  - run_detection()    → persist flagged results to an anomaly table in Postgres (not yet modelled)
-  - query_anomalies()  → query that Postgres anomaly table
+run_detection() reads confirmed calculated emissions and stores flags in the
+anomalies table; query_anomalies() reads them back.
 """
 
 import logging

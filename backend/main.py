@@ -9,7 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from config import get_settings
 from database import init_db
 from routers import anomalies, auth, emissions, reports, upload
-from routers import activity, calculations, facilities, recommendations, scenarios, users, account
+from routers import activity, calculations, facilities, scenarios, users, account
 
 logger = logging.getLogger(__name__)
 
@@ -49,7 +49,6 @@ def create_app() -> FastAPI:
     app.include_router(facilities.router, prefix="/api/facilities", tags=["facilities"])
     app.include_router(activity.router, prefix="/api/activity", tags=["activity"])
     app.include_router(calculations.router, prefix="/api/calculations", tags=["calculations"])
-    app.include_router(recommendations.router, prefix="/api/recommendations", tags=["recommendations"])
     app.include_router(scenarios.router, prefix="/api/scenarios", tags=["scenarios"])
 
     @app.get("/health", tags=["system"])

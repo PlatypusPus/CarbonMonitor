@@ -126,67 +126,6 @@ def query_timeseries(
     ]
 
 
-# Sources that represent externally uploaded data (CSV/XLSX uploads + Excel workbooks)
-UPLOAD_SOURCES = ("csv", "excel")
-
-
-def query_crossverify(
-    db: Session,
-    metric: str,
-    interval: str = "1d",
-    source: str | None = None,
-    facility_id: UUID | None = None,
-) -> list[dict[str, Any]]:
-    """Compare upload (csv/excel) vs live (ocr/manual) per time bucket with discrepancy %."""
-    # source param ignored for cross-verify — always compares upload sources vs non-upload sources
-    upload_rows = {r["timestamp"]: r for r in query_timeseries(db, metric, interval, source=list(UPLOAD_SOURCES), facility_id=facility_id)}
-
-    # filter live to exclude upload sources: manual + ocr
-    from sqlalchemy import func, text
-
-    if interval not in _INTERVAL_MAP:
-        interval = "1d"
-    if interval == "1h":
-        bucket_expr = func.date_trunc("hour", ActivityRecord.period_start)
-    elif interval in ("1d", "1mo"):
-        bucket_expr = func.date_trunc(_INTERVAL_MAP[interval][0], ActivityRecord.period_start)
-    elif interval in ("15m", "6h"):
-        stride = "15 minutes" if interval == "15m" else "6 hours"
-        bucket_expr = func.date_bin(text(f"'{stride}'"), ActivityRecord.period_start, text("'2001-01-01'::timestamptz"))
-    else:
-        bucket_expr = func.date_trunc("hour", ActivityRecord.period_start)
-
-    live_q = (
-        db.query(
-            bucket_expr.label("bucket"),
-            func.sum(CalculatedEmission.co2e_kg).label("value"),
-        )
-        .join(ActivityRecord, CalculatedEmission.activity_record_id == ActivityRecord.id)
-        .filter(ActivityRecord.activity_type == metric)
-        .filter(ActivityRecord.source.notin_(UPLOAD_SOURCES))
-        .filter(CONFIRMED_ONLY)
-        .group_by(text("bucket"))
-        .order_by(text("bucket"))
-    )
-    if facility_id is not None:
-        live_q = live_q.filter(scope_filter(ActivityRecord.facility_id, facility_id))
-    live_map = {r.bucket: float(r.value) for r in live_q.all()}
-    upload_map = {r["timestamp"]: r["value"] for r in upload_rows.values()}
-
-    all_buckets = sorted(set(live_map) | set(upload_map))
-    out: list[dict[str, Any]] = []
-    for b in all_buckets:
-        lv = live_map.get(b)
-        uv = upload_map.get(b)
-        disc = None
-        if lv is not None and lv != 0 and uv is not None:
-            disc = ((uv - lv) / lv) * 100
-        elif lv is None and uv is not None:
-            disc = None
-        out.append({"timestamp": b, "live_value": lv, "upload_value": uv, "discrepancy_pct": disc})
-    return out
-
-
 def query_summary(db: Session, facility_id: UUID | None = None,
                   start: datetime | None = None, end: datetime | None = None) -> list[dict[str, Any]]:
     """Aggregate co2e_kg by activity_type with chronological latest."""

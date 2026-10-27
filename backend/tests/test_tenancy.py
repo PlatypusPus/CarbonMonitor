@@ -105,8 +105,6 @@ def test_facility_isolation_and_admin_user_lifecycle():
             for route in ["/api/emissions/summary", "/api/emissions/latest", "/api/anomalies", "/api/reports/esg", "/api/activity/drafts"]:
                 assert client.get(route, params={"facility_id": str(beta.id)}, headers=mh).status_code == 403
                 assert client.get(route, headers=uh).status_code == 403
-            for route in ["/api/scenarios/", "/api/recommendations/"]:
-                assert client.get(route, headers=uh).status_code == 403
             pdf = client.get("/api/reports/esg", headers=mh)
             text = "".join(page.extract_text() for page in PdfReader(BytesIO(pdf.content)).pages)
             assert "Alpha campus" in text and "Private Beta campus" not in text

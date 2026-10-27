@@ -1,13 +1,10 @@
 from models.activity_record import ActivityRecord
 from models.anomaly import Anomaly
-from models.period import Period
 from models.calculated_emission import CalculatedEmission
 from models.emission_factor import EmissionFactor
 from models.facility import Facility
 from models.ocr_draft import OCRDraft
-from models.recommendation import Recommendation
 from models.role import Role
-from models.scenario import Scenario
 from models.session import UserSession
 from models.upload import Upload
 from models.user import User
@@ -16,14 +13,11 @@ from models.organization import Organization, EmailToken
 __all__ = [
     "ActivityRecord",
     "Anomaly",
-    "Period",
     "CalculatedEmission",
     "EmissionFactor",
     "Facility",
     "OCRDraft",
-    "Recommendation",
     "Role",
-    "Scenario",
     "UserSession",
     "Upload",
     "User",

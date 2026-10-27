@@ -553,17 +553,13 @@ def test_managers_have_isolated_monthly_aggregates(client, e2e_setup):
             assert series.status_code == 200, series.text
             assert len(series.json()) == 1
             assert series.json()[0]["value"] == pytest.approx(quantity * .82)
-        cross = client.get("/api/emissions/crossverify", headers=headers,
-            params={"metric": "electricity", "interval": "1mo"})
-        assert cross.status_code == 200, cross.text
-        assert len(cross.json()) == 1 and cross.json()[0]["upload_value"] == pytest.approx(quantity * .82)
         summary = client.get("/api/emissions/summary", headers=headers).json()
         assert len(summary) == 1 and summary[0]["count"] == 1
         assert summary[0]["avg_value"] == pytest.approx(quantity * .82)
         scoped_admin = client.get("/api/emissions/summary", headers=admin_headers, params={"facility_id": fid})
         assert scoped_admin.json() == summary
         other_id = next(other[1] for other in managers if other[1] != fid)
-        for path in ["timeseries", "crossverify", "latest", "summary"]:
+        for path in ["timeseries", "latest", "summary"]:
             assert client.get(f"/api/emissions/{path}", headers=headers,
                 params={"metric": "electricity", "facility_id": other_id}).status_code == 403
         report = client.get("/api/reports/esg", headers=headers)
