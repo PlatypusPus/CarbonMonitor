@@ -42,7 +42,8 @@ export default function Login() {
     <form onSubmit={submit}>
       <fieldset disabled={!!busy} className="grid gap-5">
         <label className="text-sm font-semibold">Email address<input type="email" autoComplete="email" required value={email} onChange={event => { setEmail(event.target.value); setVerificationEmail(''); setNotice(''); setError(''); }} placeholder="you@organization.com" className="account-input" /></label>
-        <AuthPassword id="login-password" required autoComplete="current-password" value={password} onChange={event => setPassword(event.target.value)} />
+        <div><AuthPassword id="login-password" required autoComplete="current-password" value={password} onChange={event => setPassword(event.target.value)} />
+          <Link to="/reset-password" className="auth-link mt-2 inline-block text-sm">Forgot or want to change your password?</Link></div>
         {error && <p role="alert" className="auth-error">{error}</p>}
         <button type="submit" className="account-primary w-full">{busy === 'login' ? 'Signing in...' : 'Sign in'}</button>
       </fieldset>

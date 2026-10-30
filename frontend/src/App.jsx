@@ -9,6 +9,7 @@ import Landing from "./pages/Landing";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import AccountLink from "./pages/AccountLink";
+import ResetPassword from "./pages/ResetPassword";
 import Profile from "./pages/Profile";
 import Onboarding from "./pages/Onboarding";
 import Trends from "./pages/Trends";
@@ -29,6 +30,7 @@ export default function App() {
       <Route path="/" element={<Landing />} />
       <Route path="/login" element={<Login />} />
       <Route path="/signup" element={<Signup />} />
+      <Route path="/reset-password" element={<ResetPassword />} />
       <Route path="/verify-email" element={<AccountLink />} />
       <Route path="/join-organization" element={<AccountLink join />} />
       <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />

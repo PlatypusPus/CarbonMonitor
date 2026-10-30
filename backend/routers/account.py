@@ -65,6 +65,11 @@ class PasswordChange(BaseModel):
     _validate_password = field_validator("new_password")(Signup.password_length.__func__)
 
 
+class PasswordReset(TokenRequest):
+    new_password: str = Field(min_length=10, max_length=72)
+    _validate_password = field_validator("new_password")(Signup.password_length.__func__)
+
+
 class DeleteAccount(BaseModel):
     password: str = Field(max_length=72)
     confirmation: str
@@ -84,7 +89,21 @@ def throttle(db, requester):
         raise HTTPException(429, "Too many email requests. Try again in an hour.")
 
 
+LINKS = {
+    "verify": dict(route="verify-email", hours=24, expiry="24 hours", subject="Verify your CarbonTrace email",
+        title="Confirm your email", button="Verify email",
+        intro="Thanks for signing up. Confirm your email address to open your private workspace and start tracking your facility's footprint."),
+    "invite": dict(route="join-organization", hours=168, expiry="7 days", subject="Join an organization on CarbonTrace",
+        title="You're invited to CarbonTrace", button="Accept invitation",
+        intro="You've been invited to join an organization on CarbonTrace. Sign in with this email address to accept the invitation."),
+    "reset": dict(route="reset-password", hours=1, expiry="1 hour", subject="Reset your CarbonTrace password",
+        title="Reset your password", button="Choose a new password",
+        intro="Someone asked to reset the password for your CarbonTrace account. Open the link to choose a new one."),
+}
+
+
 def issue_link(db, *, purpose, email, requester, user_id=None, organization_id=None, facility_id=None):
+    link = LINKS[purpose]
     throttle(db, requester)
     now = datetime.now(timezone.utc)
     recent = db.query(EmailToken).filter(EmailToken.email == email, EmailToken.purpose == purpose,
@@ -94,18 +113,11 @@ def issue_link(db, *, purpose, email, requester, user_id=None, organization_id=N
     raw = secrets.token_urlsafe(48)
     db.add(EmailToken(token_hash=hash_refresh_token(raw), purpose=purpose, email=email,
         requester=requester, user_id=user_id, organization_id=organization_id, facility_id=facility_id,
-        expires_at=now + timedelta(hours=24 if purpose == "verify" else 168)))
-    route = "verify-email" if purpose == "verify" else "join-organization"
-    url = get_settings().public_app_url.rstrip('/') + f"/{route}#token={raw}"
-    subject = "Verify your CarbonTrace email" if purpose == "verify" else "Join an organization on CarbonTrace"
-    expiry = '24 hours' if purpose == 'verify' else '7 days'
-    note = f"This link is single-use and expires in {expiry}. If you did not request it, you can ignore this email."
-    html = account_email_html(
-        title="Confirm your email" if purpose == "verify" else "You're invited to CarbonTrace",
-        intro="Thanks for signing up. Confirm your email address to open your private workspace and start tracking your facility's footprint."
-        if purpose == "verify" else "You've been invited to join an organization on CarbonTrace. Sign in with this email address to accept the invitation.",
-        button="Verify email" if purpose == "verify" else "Accept invitation",
-        url=url, note=note)
+        expires_at=now + timedelta(hours=link["hours"])))
+    url = get_settings().public_app_url.rstrip('/') + f"/{link['route']}#token={raw}"
+    subject = link["subject"]
+    note = f"This link is single-use and expires in {link['expiry']}. If you did not request it, you can ignore this email."
+    html = account_email_html(title=link["title"], intro=link["intro"], button=link["button"], url=url, note=note)
     send_account_email(email, subject, f"{subject}\n\nOpen this link to continue:\n{url}\n\n{note}", html)
 
 
@@ -183,6 +195,32 @@ def verify(payload: TokenRequest, db: Session = Depends(get_db)):
     db.query(EmailToken).filter(EmailToken.user_id == user.id, EmailToken.purpose == 'verify').update({'used_at': datetime.now(timezone.utc)})
     db.commit()
     return {'message': 'Email verified. You can now sign in.'}
+
+
+@router.post('/forgot-password')
+def forgot_password(payload: EmailRequest, request: Request, db: Session = Depends(get_db)):
+    requester = hash_refresh_token(request.client.host if request.client else 'unknown')
+    throttle(db, requester)
+    user = db.query(User).filter(func.lower(User.email) == str(payload.email).lower()).first()
+    if user and user.is_active:
+        issue_link(db, purpose='reset', email=user.email, requester=requester, user_id=user.id)
+        db.commit()
+    # Same answer either way so the form can't be used to discover accounts.
+    return {'message': 'If an account exists for this email, a reset link has been sent.'}
+
+
+@router.post('/reset-password')
+def reset_password(payload: PasswordReset, db: Session = Depends(get_db)):
+    token = find_token(db, payload.token, 'reset')
+    user = db.get(User, token.user_id)
+    if not user or not user.is_active or user.email != token.email:
+        raise HTTPException(400, 'This reset link is no longer valid.')
+    user.hashed_password = hash_password(payload.new_password)
+    user.email_verified = True  # the link proves they own the inbox
+    revoke_sessions(db, user)
+    db.query(EmailToken).filter(EmailToken.user_id == user.id, EmailToken.purpose == 'reset').update({'used_at': datetime.now(timezone.utc)})
+    db.commit()
+    return {'message': 'Password changed. Sign in with your new password.'}
 
 
 @router.get('/profile')

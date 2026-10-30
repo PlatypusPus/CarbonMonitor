@@ -34,10 +34,10 @@ export default function AuthLayout({ title, description, children }) {
   </main>;
 }
 
-export function AuthPassword({ id, hint, ...props }) {
+export function AuthPassword({ id, hint, label = 'Password', ...props }) {
   const [visible, setVisible] = useState(false);
   return <div>
-    <label htmlFor={id} className="text-sm font-semibold">Password</label>
+    <label htmlFor={id} className="text-sm font-semibold">{label}</label>
     <div className="relative">
       <input {...props} id={id} type={visible ? 'text' : 'password'} aria-describedby={hint ? `${id}-hint` : undefined} className="account-input" style={{ paddingRight: '3.5rem' }} />
       <button type="button" onClick={() => setVisible(!visible)} aria-label={visible ? 'Hide password' : 'Show password'} aria-pressed={visible} className="absolute inset-y-0 right-0 grid w-12 place-items-center rounded-r-lg text-body hover:text-leaf-action">
