@@ -8,6 +8,45 @@ const number = (value) => value.toLocaleString(undefined, { maximumFractionDigit
 const inputQuantity = (value) => String(Number(value.toPrecision(12)));
 const month = (value) => new Date(value).toLocaleDateString(undefined, { month: "short", year: "numeric", timeZone: "UTC" });
 
+function AskScenario() {
+  const [prompt, setPrompt] = useState("");
+  const ask = useMutation({ mutationFn: (text) => client.post("/scenarios/ask", { prompt: text }).then((r) => r.data) });
+  const answer = ask.data;
+  const detail = ask.error?.response?.data?.detail;
+  return (
+    <section className="rounded-card border border-line bg-surface p-5">
+      <h2 className="font-semibold text-ink">Ask in plain language</h2>
+      <form className="mt-3 flex flex-col gap-3" onSubmit={(event) => { event.preventDefault(); if (prompt.trim().length >= 3) ask.mutate(prompt.trim()); }}>
+        <label htmlFor="scenario-prompt" className="text-sm text-muted">Describe a change, for example "What if we cut electricity by 15% from June to August?"</label>
+        <textarea id="scenario-prompt" rows={2} maxLength={1000} value={prompt} disabled={ask.isPending}
+          onChange={(event) => setPrompt(event.target.value)} className="w-full rounded-lg border border-line bg-canvas p-3 text-sm" />
+        <button type="submit" disabled={ask.isPending || prompt.trim().length < 3}
+          className="w-fit rounded-xl bg-leaf px-4 py-3 font-semibold text-white hover:bg-leaf-hover disabled:opacity-60">
+          {ask.isPending ? "Thinking..." : "Ask"}
+        </button>
+      </form>
+      {ask.isError && <p role="alert" className="mt-3 text-sm text-rose">{typeof detail === "string" ? detail : "Could not run this scenario. Try again."}</p>}
+      {answer && <div aria-live="polite" className="mt-5">
+        <p className="text-sm text-ink">{answer.explanation}</p>
+        {answer.changes.length > 0 && <>
+          <p className="mt-4 text-lg font-semibold text-leaf-deep">
+            {number(answer.baseline_co2e_kg)} → {number(answer.projected_co2e_kg)} kg CO2e
+            ({answer.savings_co2e_kg >= 0 ? "" : "+"}{number(Math.abs(answer.savings_co2e_kg))} kg {answer.savings_co2e_kg >= 0 ? "less" : "more"})
+          </p>
+          <ul className="mt-3 divide-y divide-line text-sm">
+            {answer.changes.map((change, index) => <li key={change.activity_record_id} className="flex flex-wrap justify-between gap-2 py-2">
+              <span>{answer.reasons[index]}</span>
+              <span className="tabular-nums text-muted">{number(change.baseline_quantity)} → {number(change.proposed_quantity)} {change.unit} · {number(change.projected_co2e_kg)} kg CO2e</span>
+            </li>)}
+          </ul>
+        </>}
+        {answer.skipped.length > 0 && <p className="mt-3 text-xs text-muted">Skipped: {answer.skipped.join("; ")}</p>}
+        <p className="mt-3 text-xs text-muted">Gemini suggests the quantities; CarbonTrace calculates emissions with each record's own factor. Nothing is saved.</p>
+      </div>}
+    </section>
+  );
+}
+
 export default function Scenarios() {
   const facilities = useFacilities();
   const records = useActivity();
@@ -34,7 +73,8 @@ export default function Scenarios() {
       </div>
       {records.isLoading || facilities.isLoading ? <p role="status">Loading confirmed records...</p> :
         records.isError || facilities.isError ? <p role="alert">Could not load the baseline records. <button className="underline" onClick={() => { records.refetch(); facilities.refetch(); }}>Retry</button></p> :
-        !records.data?.length ? <p>No confirmed records yet. <Link className="text-leaf underline" to="/upload">Review activity data first</Link>.</p> : (
+        !records.data?.length ? <p>No confirmed records yet. <Link className="text-leaf underline" to="/upload">Review activity data first</Link>.</p> : (<>
+          <AskScenario />
           <div className="grid gap-5 lg:grid-cols-2">
             <form className="flex flex-col gap-4 rounded-card border border-line bg-surface p-5" onSubmit={(event) => {
               event.preventDefault();
@@ -90,7 +130,7 @@ export default function Scenarios() {
               <p className="mt-5 border-t border-line pt-4 text-xs text-muted">Preview only. Nothing is saved to the activity ledger. Current emission factors are demonstration placeholders.</p>
             </section>
           </div>
-        )}
+        </>)}
     </div>
   );
 }

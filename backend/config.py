@@ -31,6 +31,9 @@ class Settings(BaseSettings):
     smtp_from: str = "CarbonTrace <noreply@carbontrace.local>"
     smtp_starttls: bool = False
     smtp_ssl: bool = False
+    # Leave empty to turn off natural-language scenarios.
+    gemini_api_key: str = ""
+    scenario_model: str = "gemini-flash-latest"
 
     @property
     def cors_origins_list(self) -> list[str]:
