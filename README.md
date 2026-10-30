@@ -21,6 +21,17 @@ For a fresh installation, copy `.env.example` to `.env` first. See [setup and lo
 
 Select a facility in Data Intake, upload and review records, then confirm them. Overview, Trends, and the PDF report use confirmed data.
 
+## Repository layout
+
+```
+backend/     FastAPI API: routers, services, models, schemas, tests
+frontend/    React + Vite app: pages, components, API hooks
+nginx/       Reverse proxy for the optional packaged frontend
+docs/        Setup, access, reporting and architecture guides
+docs/report/ Project report (PDF) and features brief
+scripts/     check.ps1 runs lint, tests and the build on Windows
+```
+
 ## Documentation
 
 - [Setup and login](docs/setup.md)
@@ -28,5 +39,6 @@ Select a facility in Data Intake, upload and review records, then confirm them. 
 - [College dataset](docs/demo.md)
 - [Calculations and reporting](docs/reporting.md)
 - [Architecture and verification](docs/development.md)
+- [Project report](docs/report/Report.pdf) and [features brief](docs/report/REPORT_FEATURES.md)
 
 Built with React, FastAPI, and PostgreSQL. Seeded emission factors are demonstration placeholders.

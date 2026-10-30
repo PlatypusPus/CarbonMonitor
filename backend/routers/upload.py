@@ -1,4 +1,4 @@
-"""CSV/XLSX data uploads for cross-verification against API-sourced emissions."""
+"""CSV/XLSX uploads staged as drafts for review."""
 
 import logging
 from datetime import date, datetime

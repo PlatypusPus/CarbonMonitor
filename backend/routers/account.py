@@ -19,7 +19,7 @@ from models.upload import Upload
 from models.session import UserSession
 from routers.auth import me, REFRESH_COOKIE_NAME, REFRESH_COOKIE_PATH
 from security import hash_password, verify_password, hash_refresh_token
-from services.mailer import send_account_email
+from services.mailer import account_email_html, send_account_email
 
 router = APIRouter()
 
@@ -98,7 +98,15 @@ def issue_link(db, *, purpose, email, requester, user_id=None, organization_id=N
     route = "verify-email" if purpose == "verify" else "join-organization"
     url = get_settings().public_app_url.rstrip('/') + f"/{route}#token={raw}"
     subject = "Verify your CarbonTrace email" if purpose == "verify" else "Join an organization on CarbonTrace"
-    send_account_email(email, subject, f"{subject}\n\nOpen this link to continue:\n{url}\n\nThis link is single-use and expires in {'24 hours' if purpose == 'verify' else '7 days'}. If you did not request it, ignore this email.")
+    expiry = '24 hours' if purpose == 'verify' else '7 days'
+    note = f"This link is single-use and expires in {expiry}. If you did not request it, you can ignore this email."
+    html = account_email_html(
+        title="Confirm your email" if purpose == "verify" else "You're invited to CarbonTrace",
+        intro="Thanks for signing up. Confirm your email address to open your private workspace and start tracking your facility's footprint."
+        if purpose == "verify" else "You've been invited to join an organization on CarbonTrace. Sign in with this email address to accept the invitation.",
+        button="Verify email" if purpose == "verify" else "Accept invitation",
+        url=url, note=note)
+    send_account_email(email, subject, f"{subject}\n\nOpen this link to continue:\n{url}\n\n{note}", html)
 
 
 def find_token(db, raw, purpose):

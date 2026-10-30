@@ -221,7 +221,6 @@ Other interface features:
   - seeds roles and emission factors;
   - holds a PostgreSQL advisory lock so that several workers never initialize at the same time.
 - A `/health` endpoint for container checks.
-- `run_backfill.py`: an idempotent maintenance script that fills in missing calculations and upload metadata.
 
 ### B.12 REST API summary
 

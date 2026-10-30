@@ -8,9 +8,17 @@
 - `backend/models`: PostgreSQL records and constraints.
 - `backend/tests`: synthetic workbook and calculation regressions.
 
-Flow: file -> validated draft -> human confirmation -> activity record -> calculated emissions -> dashboard and PDF.
-
-![System flow](../assets/Flow.png)
+```mermaid
+flowchart LR
+  A[Excel / CSV / PDF / image] --> B[Preview and validation]
+  B --> C[Draft]
+  C -->|human confirms| D[Activity record]
+  D --> E[Calculated emission<br/>quantity x factor]
+  E --> F[Overview and Trends]
+  E --> G[Anomaly detection]
+  E --> H[What-if scenarios]
+  E --> I[PDF report]
+```
 
 ## Verification
 
@@ -29,6 +37,6 @@ npm run build
 npm test
 ```
 
-On Windows, `run_audit.ps1 -TestDatabaseUrl <test-DSN>` runs these checks together. Synthetic fixtures are generated in memory, so private bills are unnecessary for tests.
+On Windows, `scripts/check.ps1 -TestDatabaseUrl <test-DSN>` runs these checks together. Synthetic fixtures are generated in memory, so private bills are unnecessary for tests.
 
 Use short conventional commit messages, keep changes focused, and run relevant checks before committing. Do not commit credentials, workbooks, databases, or generated build output.

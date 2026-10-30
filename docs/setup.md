@@ -13,7 +13,7 @@ npm run dev
 
 Open **http://localhost:5173**. Vite proxies `/api` to Docker's API on `127.0.0.1:8000`. Port 5173 is fixed; if another dev server is already using it, Vite stops instead of silently opening a different port. Use the running instance or stop it before restarting.
 
-Docker's persistent database contains 14 original college electricity records under College Campus. The former local test database on port 55439 is stopped. Passwords are supplied in the project chat, not committed.
+Docker's persistent database contains 14 original college electricity records under College Campus. Passwords are supplied in the project chat, not committed.
 
 ## Fresh installation and accounts
 

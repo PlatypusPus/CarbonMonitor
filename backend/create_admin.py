@@ -1,4 +1,4 @@
-"""Create an initial user from the command line (no public signup endpoint)."""
+"""Create an administrator account from the command line."""
 
 import argparse
 

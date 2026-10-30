@@ -15,13 +15,14 @@ export default function Signup() {
   const [sent, setSent] = useState(false);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
+  const [exists, setExists] = useState(false);
 
   async function submit(event, resend = false) {
-    event.preventDefault(); setBusy(true); setError(''); setMessage('');
+    event.preventDefault(); setBusy(true); setError(''); setMessage(''); setExists(false);
     try {
       const { data } = await client.post(resend ? '/account/resend-verification' : '/account/signup', resend ? { email: form.email } : form);
       setSent(true); setMessage(data.message); setForm(previous => ({ ...previous, password: '' }));
-    } catch (error) { setError(accountError(error)); } finally { setBusy(false); }
+    } catch (error) { setError(accountError(error)); setExists(!resend && error.response?.status === 409); } finally { setBusy(false); }
   }
 
   return <AuthLayout title={sent ? 'Check your email.' : 'Create your account.'} description={sent ? 'Verify your email to open your new workspace.' : 'Start tracking your facility with a private organization.'}>
@@ -42,6 +43,7 @@ export default function Signup() {
           {[['full_name','Full name','text','name'],['email','Email address','email','email'],['organization_name','Organization name','text','organization']].map(([key,label,type,autoComplete]) => <label key={key} className="text-sm font-semibold">{label}<input required type={type} autoComplete={autoComplete} maxLength={255} value={form[key]} onChange={event => setForm({ ...form, [key]: event.target.value })} className="account-input" /></label>)}
           <AuthPassword id="signup-password" required minLength={10} maxLength={72} autoComplete="new-password" hint="Use at least 10 characters." value={form.password} onChange={event => setForm({ ...form, password: event.target.value })} />
           {error && <p role="alert" className="auth-error">{error}</p>}
+          {exists && <button type="button" onClick={event => submit(event, true)} className="auth-link min-h-11">Resend verification email</button>}
           <button className="account-primary w-full" type="submit">{busy ? 'Creating account...' : 'Create account'}</button>
         </fieldset>
       </form>

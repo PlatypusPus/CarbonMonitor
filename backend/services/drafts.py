@@ -21,12 +21,9 @@ SOURCE_TYPE_OCR = "ocr"
 SOURCE_TYPE_EXCEL = "excel"
 SOURCE_TYPE_UPLOAD = "upload"
 
-# How a draft's source_type maps onto ActivityRecord.source. The ledger's
-# ``activity_source_enum`` predates the upload intake flow and has no "upload"
-# member; uploaded CSV/XLSX rows have always been recorded as "csv", which is
-# also what the cross-verification query treats as the "uploaded" side. Keeping
-# the mapping here avoids widening the enum while leaving the two vocabularies
-# explicitly related.
+# How a draft's source_type maps onto ActivityRecord.source. The
+# ``activity_source_enum`` has no "upload" member, so uploaded CSV/XLSX rows are
+# recorded as "csv". Keeping the mapping here avoids widening the enum.
 _DRAFT_SOURCE_TO_ACTIVITY_SOURCE = {
     SOURCE_TYPE_UPLOAD: "csv",
     SOURCE_TYPE_OCR: "ocr",
