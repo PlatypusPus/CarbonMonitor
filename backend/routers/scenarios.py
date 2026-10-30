@@ -12,6 +12,7 @@ from models.activity_record import ActivityRecord
 from schemas.scenario import ScenarioPreview, ScenarioComparison, ScenarioAsk, ScenarioAnswer
 from services.scenario import run_scenario
 from services.scenario_ai import plan_scenario
+from services.forecast import forecast
 from routers.activity import list_activity_records
 
 router = APIRouter()
@@ -56,13 +57,19 @@ def preview_scenario(payload: ScenarioPreview, db: Session = Depends(get_db),
 @router.post("/ask", response_model=ScenarioAnswer)
 def ask_scenario(payload: ScenarioAsk, db: Session = Depends(get_db),
                  current_user: User = Depends(get_current_user)) -> ScenarioAnswer:
-    """Turn a plain-language what-if into quantity changes, then calculate them here."""
-    # ponytail: newest 300 records only; page or filter by facility if prompts need older history
-    records = list_activity_records(db=db, user=current_user, facility_id=None, confirmed_only=True)[:300]
+    """Chat about a what-if. The AI proposes changes; the totals and forecast are calculated here."""
+    from models.calculated_emission import CalculatedEmission
+
+    records = list_activity_records(db=db, user=current_user, facility_id=None, confirmed_only=True)
     if not records:
         raise HTTPException(status_code=400, detail="No confirmed records yet")
-    labels = {f"r{i}": record for i, record in enumerate(records, 1)}
-    plan = plan_scenario(payload.prompt, labels, db)
+    rows = db.query(ActivityRecord.activity_type, ActivityRecord.period_start, CalculatedEmission.co2e_kg).join(
+        CalculatedEmission, CalculatedEmission.activity_record_id == ActivityRecord.id).filter(
+        ActivityRecord.id.in_([r.id for r in records])).all()
+    # ponytail: the AI sees the newest 300 records; page or filter by facility if chats need older history
+    labels = {f"r{i}": record for i, record in enumerate(records[:300], 1)}
+    latest = max(r.period_start for r in records)
+    plan = plan_scenario(payload.messages, labels, db, f"{latest:%Y-%m}")
     changes, reasons, skipped = [], [], []
     for change in plan.changes:
         record = labels.get(change.record)
@@ -75,7 +82,10 @@ def ask_scenario(payload: ScenarioAsk, db: Session = Depends(get_db),
             reasons.append(change.reason)
         except HTTPException as error:
             skipped.append(f"{record.activity_type} {record.period_start:%b %Y}: {error.detail}")
+    known = {r.activity_type for r in records}
+    future = [c for c in plan.future_changes if c.activity_type in known and -100 <= c.change_percent <= 1000]
     baseline = sum(c.baseline_co2e_kg for c in changes)
     projected = sum(c.projected_co2e_kg for c in changes)
-    return ScenarioAnswer(explanation=plan.explanation, changes=changes, reasons=reasons, skipped=skipped,
-        baseline_co2e_kg=baseline, projected_co2e_kg=projected, savings_co2e_kg=baseline - projected)
+    return ScenarioAnswer(reply=plan.reply, changes=changes, reasons=reasons, skipped=skipped,
+        baseline_co2e_kg=baseline, projected_co2e_kg=projected, savings_co2e_kg=baseline - projected,
+        footprint_co2e_kg=sum(row.co2e_kg for row in rows), future_changes=future, forecast=forecast(rows, future))
